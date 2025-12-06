@@ -20,8 +20,8 @@ jobs:
 
       - name: Deploy to VM
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.HOST }} << 'EOF'
-          cd "/home/${{ secrets.USER }}/cherang-bot"
+          ssh -o StrictHostKeyChecking=no wltn5548@${{ secrets.HOST }} << 'EOF'
+          cd /home/wltn5548/cherang-bot
           git pull
           pm2 restart cherang
           EOF
