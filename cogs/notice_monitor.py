@@ -29,13 +29,15 @@ class NoticeMonitorCog(commands.Cog):
     def cog_unload(self):
         self.check_notice.cancel()
 
-    def load_last_id(self, file_path: str) -> int:
-        if os.path.exists(file_path):
-            return int(open(file_path).read())
+    def load_last_id(self) -> int:
+        # 전역 변수로 경로 사용
+        if os.path.exists(NOTICE_DATA_PATH):
+            return int(open(NOTICE_DATA_PATH).read())
         return 0
 
-    def save_last_id(self, file_path: str, nid: int):
-        with open(file_path, "w") as f:
+    def save_last_id(self, nid: int):
+        # 전역 변수로 경로 사용
+        with open(NOTICE_DATA_PATH, "w") as f:
             f.write(str(nid))
 
     def fetch_latest_notice(self, url: str):
@@ -74,14 +76,14 @@ class NoticeMonitorCog(commands.Cog):
         event_id, event_title, event_category, event_link = self.fetch_latest_notice(EVENT_URL)
 
         # 새 공지 및 이벤트 확인 후 처리
-        last_notice_id = self.load_last_id(NOTICE_DATA_PATH)
+        last_notice_id = self.load_last_id()
         if notice_id and notice_id > last_notice_id:
-            self.save_last_id(NOTICE_DATA_PATH, notice_id)
+            self.save_last_id(notice_id)
             await self.send_notification(notice_id, title, category, link)
 
-        last_event_id = self.load_last_id(EVENT_DATA_PATH)
+        last_event_id = self.load_last_id()
         if event_id and event_id > last_event_id:
-            self.save_last_id(EVENT_DATA_PATH, event_id)
+            self.save_last_id(event_id)
             await self.send_notification(event_id, event_title, event_category, event_link)
 
     async def send_notification(self, notice_id, title, category, link):
@@ -97,6 +99,3 @@ class NoticeMonitorCog(commands.Cog):
             embed.set_footer(text="📢 FF14 새 소식 알림")
 
             await channel.send(embed=embed)
-
-async def setup(bot):
-    await bot.add_cog(NoticeMonitorCog(bot))
