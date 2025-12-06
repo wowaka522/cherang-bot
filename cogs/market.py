@@ -29,7 +29,7 @@ class MarketCog(commands.Cog):
         self.bot = bot
 
     # ======================
-    # 공통: Slash용 응답 (완전 안전버전)
+    # 공통: Slash용 응답 (defer 전용 안전 버전)
     # ======================
     async def _send_slash(
         self,
@@ -40,39 +40,29 @@ class MarketCog(commands.Cog):
     ):
         """
         슬래시 명령 전용 응답:
-        - defer 이후 followup/send_message 상태에 따라 분기
-        - 중복 response 방지!
+        - defer() 호출 이후 반드시 followup.send()만 사용!
+        - 중복 response 방지
         """
         try:
-            # 아직 아무 응답 안 됐으면 → send_message
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    embed=embed,
-                    view=view,
-                    ephemeral=False
-                )
-                if file:
-                    await interaction.followup.send(file=file)
-            else:
-                # 이미 defer 했거나 응답된 상태 → followup
-                await interaction.followup.send(
-                    embed=embed,
-                    view=view,
-                    ephemeral=False
-                )
-                if file:
-                    await interaction.followup.send(file=file)
+            # Embed + 버튼 먼저
+            await interaction.followup.send(
+                embed=embed,
+                view=view if view else None,
+                ephemeral=False,
+            )
+
+            # 파일은 따로 followup 전송
+            if file:
+                await interaction.followup.send(file=file)
 
         except Exception as e:
             print(f"[Slash Send Error] {e}")
-            # 마지막 보루 - 그래도 뭔가 보내기
+            # fallback: 그래도 최소 embed라도 보내기
             try:
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(embed=embed)
-                else:
-                    await interaction.followup.send(embed=embed)
+                await interaction.followup.send(embed=embed)
             except:
                 pass
+
 
     # ======================
     # 공통: 자연어용 응답
