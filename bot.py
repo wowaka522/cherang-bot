@@ -49,11 +49,10 @@ async def status_task():
         await asyncio.sleep(3600)
 
 
-print("🔥 on_message fired:", id(on_message))
-
-
 @bot.event
 async def on_message(message: discord.Message):
+    print("🔥 on_message fired:", id(on_message))
+
     if message.author.bot:
         return
 
