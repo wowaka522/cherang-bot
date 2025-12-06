@@ -60,32 +60,34 @@ async def status_task():
 
 @bot.event
 async def on_message(message: discord.Message):
-    # 봇 메시지는 무시
     if message.author.bot:
         return
 
-    # Slash 명령이면 완전 무시 (중복 방지)
+    # Slash 응답이면 무시
     if message.interaction is not None:
         return
 
-    # 자연어 Market
     lowered = message.content.lower()
+
+    # 자연어 Market
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
-        return  # 자연어 응답 후 STOP!
+        return   # 🔥 여기 무조건 STOP
 
     # 자연어 Weather
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
-        return  # STOP!
+        return   # 🔥 여기서도 STOP
 
-    # 자연어가 아니면 → 남은 명령어(프리픽스) 처리
-    await bot.process_commands(message)
-
+    # ↘ 여기! 자연어도 명령도 아니면 챗봇이 처리
+    chat = bot.get_cog("ChatCog")  # 챗봇 담당 Cog 이름
+    if chat:
+        await chat.reply_chat(message)
+        return   # 🔥 중복방지 끝!
 
 
 
