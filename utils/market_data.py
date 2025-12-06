@@ -10,16 +10,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
-# 폰트 2개 모두 로드 (Regular + Bold)
+# 설치된 JP 폰트 직접 사용
 font_regular = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 font_bold = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 
 fm.fontManager.addfont(font_regular)
 fm.fontManager.addfont(font_bold)
 
-# 실제 family name을 강제로 override
-matplotlib.rcParams['font.family'] = 'Noto Sans CJK KR'
+# 서버에서 확인된 이름 그대로 사용!
+matplotlib.rcParams['font.family'] = 'Noto Sans CJK JP'
 matplotlib.rcParams['axes.unicode_minus'] = False
+
 
 
 # ===== 데이터 파일 경로 =====
