@@ -26,15 +26,6 @@ class WeatherCog(commands.Cog):
     # /날씨 슬래시
     # ==========================
     @commands.Cog.listener()
-    async def on_ready(self):
-        try:
-            guild = discord.Object(id=GUILD_ID)
-            self.bot.tree.copy_global_to(guild=guild)
-            synced = await self.bot.tree.sync(guild=guild)
-            print(f"✨ Weather Slash Synced! ({len(synced)})")
-        except Exception as e:
-            print("⚠ Weather Slash Sync Error:", e)
-
     @app_commands.command(name="날씨", description="파판14 지역 날씨를 보여준다냥")
     @app_commands.describe(지역="지역 일부를 입력해줘 (예: 림사 / 라노시아)")
     async def weather_cmd(self, interaction: discord.Interaction, 지역: str):
