@@ -4,20 +4,21 @@ import requests
 import io
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-import matplotlib
 
-# 💥 폰트 직접 로드 (경로 그대로 넣음!)
-font_path = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
+# matplotlib + 폰트 설정
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# 💥 폰트 경로 (네 서버에 실제 있는 폰트)
+font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+
+# 💥 Matplotlib에 폰트 직접 등록
 fm.fontManager.addfont(font_path)
 
-# 💥 폰트 설정을 그 다음에 해야 적용됨 🔑
-matplotlib.rc('font', family='Noto Sans CJK KR')
-matplotlib.rcParams['axes.unicode_minus'] = False
-matplotlib.rcParams['axes.unicode_minus'] = False
-
-import matplotlib.pyplot as plt
-
-
+# 💥 폰트 적용
+matplotlib.rc("font", family="Noto Sans CJK KR")
+matplotlib.rcParams["axes.unicode_minus"] = False
 
 # ===== 데이터 파일 경로 =====
 DATA_DIR = os.path.join("data")
