@@ -1,31 +1,32 @@
-name: 🚀 Deploy to GCP Windows VM (cherang-bot)
+name: Deploy Cherang Bot
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  schedule:
+    - cron: "0 19 * * *" # 한국시간 매일 새벽 4시 (UTC+9)
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Deploy to Windows VM via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            cd "C:\Users\gs554\Desktop\자료\디스코드 봇\cherang-bot"
-            git pull origin main
-            pip install -r requirements.txt --upgrade
-            pm2 restart cherang
-            echo 🚀 Deploy complete!
-            on:
-  schedule:
-    - cron: "0 19 * * *"  # 한국시간 새벽 4시(UTC+9)
-  workflow_dispatch:
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Copy project to server
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.HOST }} \
+        "pm2 stop cherang || true"
+        rsync -avz --exclude='.git' ./ ${{ secrets.USER }}@${{ secrets.HOST }}:${{ secrets.CHERANG_PATH }}
+
+    - name: Restart bot with PM2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.HOST }} \
+        "cd ${{ secrets.CHERANG_PATH }} && pm2 restart cherang || pm2 start bot.py --name cherang"
