@@ -10,15 +10,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
-# 💥 폰트 경로 (네 서버에 실제 있는 폰트)
-font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+# 폰트 2개 모두 로드 (Regular + Bold)
+font_regular = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+font_bold = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 
-# 💥 Matplotlib에 폰트 직접 등록
-fm.fontManager.addfont(font_path)
+fm.fontManager.addfont(font_regular)
+fm.fontManager.addfont(font_bold)
 
-# 💥 폰트 적용
-matplotlib.rc("font", family="Noto Sans CJK KR")
-matplotlib.rcParams["axes.unicode_minus"] = False
+# 실제 family name을 강제로 override
+matplotlib.rcParams['font.family'] = 'Noto Sans CJK KR'
+matplotlib.rcParams['axes.unicode_minus'] = False
+
 
 # ===== 데이터 파일 경로 =====
 DATA_DIR = os.path.join("data")
