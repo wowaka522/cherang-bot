@@ -6,9 +6,13 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import matplotlib
 
-# ===== 한글 폰트 설정 =====
+# 💥 폰트 직접 로드 (경로 그대로 넣음!)
 font_path = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
+fm.fontManager.addfont(font_path)
+
+# 💥 폰트 설정을 그 다음에 해야 적용됨 🔑
 matplotlib.rc('font', family='Noto Sans CJK KR')
+matplotlib.rcParams['axes.unicode_minus'] = False
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 import matplotlib.pyplot as plt
