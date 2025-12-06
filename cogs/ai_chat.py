@@ -144,7 +144,6 @@ async def call_deepseek_proactive(love: int) -> str:
         return random.choice(fallback)
 
 
-# 아래 코드가 AIChatCog 클래스 안에 위치해야 합니다.
 class AIChatCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -193,7 +192,6 @@ class AIChatCog(commands.Cog):
         if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
             return
 
-        # AI 처리
         delta = 0
         tone = "normal"
         if any(b in lowered for b in BAD_WORDS):
@@ -219,7 +217,6 @@ class AIChatCog(commands.Cog):
 
         LAST_CHAT_TIME[msg.author.id] = (msg.channel.id, datetime.utcnow().timestamp())
         self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
-
 
 
 async def setup(bot):

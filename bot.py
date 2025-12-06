@@ -56,7 +56,8 @@ async def status_task():
 
 
 
-@@bot.event
+
+@bot.event
 async def on_message(message: discord.Message):
     # 봇 메시지는 무시
     if message.author.bot:
@@ -79,20 +80,10 @@ async def on_message(message: discord.Message):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
-        return  # 자연어 응답 후 STOP!
+        return  # STOP!
 
-    # AIChatCog 응답 처리
-    chat = bot.get_cog("AIChatCog")
-    if chat:
-        # 이미 처리된 메시지에 대해서는 다시 AI 처리하지 않음
-        if message.author.bot:  # 봇의 메시지는 다시 처리하지 않음
-            return
-        await chat.on_message(message)  # AI 응답 처리 후, 명령어 처리를 하지 않음
-        return  # AI 응답 후 STOP! 더 이상 처리하지 않음
-
-    # 명령어 처리 (AIChatCog의 on_message를 처리하지 않았다면 여기서 처리)
+    # 자연어가 아니면 → 남은 명령어(프리픽스) 처리
     await bot.process_commands(message)
-
 
 
 
@@ -111,7 +102,6 @@ async def setup_extensions():
     await bot.load_extension("cogs.economy")
     await bot.load_extension("cogs.help_info")
     await bot.load_extension("cogs.admin")
-
 
 async def main():
     ensure_raphael_ready()
