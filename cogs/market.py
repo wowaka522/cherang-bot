@@ -28,7 +28,7 @@ class MarketCog(commands.Cog):
         self.bot = bot
 
     # ======================
-    # Slash 응답 전용 (안전 + 그래프 + 버튼 유지)
+    # Slash 응답 전용 (완전 안전 & UI 유지)
     # ======================
     async def _send_slash(
         self,
@@ -38,19 +38,25 @@ class MarketCog(commands.Cog):
         view: discord.ui.View | None = None,
     ):
         try:
-            # 첫 응답에 embed + 버튼 + 파일 모두 포함
-            await interaction.followup.send(
-                embed=embed,
-                file=file if file else None,
-                view=view if view else None,
-                ephemeral=False,
-            )
+            kwargs = {
+                "embed": embed,
+                "ephemeral": False,
+            }
+
+            if file:
+                kwargs["file"] = file
+            if view:
+                kwargs["view"] = view
+
+            await interaction.followup.send(**kwargs)
+
         except Exception as e:
             print(f"[Slash Send Error] {e}")
             try:
                 await interaction.followup.send(embed=embed)
             except:
                 pass
+
 
     # ======================
     # 자연어 응답 (문자 메시지)
