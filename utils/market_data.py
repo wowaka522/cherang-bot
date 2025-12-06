@@ -5,7 +5,6 @@ import io
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import matplotlib
-import matplotlib
 import matplotlib.pyplot as plt
 
 matplotlib.rc('font', family='Noto Sans CJK KR')
