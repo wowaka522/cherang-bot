@@ -58,17 +58,22 @@ async def status_task():
 
 @bot.event
 async def on_message(message: discord.Message):
+    print(f"Received message: {message.content}")  # 로그 출력
+    
     # 봇 메시지는 무시
     if message.author.bot:
+        print("Bot message detected, skipping.")  # 봇 메시지 로그
         return
 
     # Slash 명령이면 완전 무시 (중복 방지)
     if message.interaction is not None:
+        print("Slash command detected, skipping.")  # 슬래시 명령어 로그
         return
 
     # 자연어 Market
     lowered = message.content.lower()
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
+        print("Market search triggered")  # 마켓 검색 로그
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
@@ -76,6 +81,7 @@ async def on_message(message: discord.Message):
 
     # 자연어 Weather
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
+        print("Weather search triggered")  # 날씨 검색 로그
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
@@ -84,11 +90,15 @@ async def on_message(message: discord.Message):
     # AIChatCog 응답 처리
     chat = bot.get_cog("AIChatCog")
     if chat:
+        print("AI response triggered")  # AI 응답 로그
         await chat.on_message(message)  # AI 응답 처리 후, 명령어 처리를 하지 않음
         return
 
     # 명령어 처리 (AIChatCog의 on_message를 처리하지 않았다면 여기서 처리)
+    print("Processing commands")  # 명령어 처리 로그
     await bot.process_commands(message)
+
+
 
 
 
