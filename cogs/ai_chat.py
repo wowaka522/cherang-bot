@@ -25,7 +25,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 BAD_WORDS = ["시발", "씨발", "병신", "ㅅㅂ", "fuck"]
 GOOD_WORDS = ["고마워", "사랑해", "좋아해", "예쁘네", "귀여워"]
 
-DAILY_LIMIT = 50
+DAILY_LIMIT = 200
 USAGE_PATH = Path("data") / "ai_chat_usage.json"
 
 LAST_CHAT_TIME = {}
