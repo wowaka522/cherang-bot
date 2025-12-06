@@ -114,24 +114,13 @@ class AIChatCog(commands.Cog):
 
         content = msg.content.strip()
         uid = str(msg.author.id)
-
         lowered = content.lower()
 
-        # 자연어 시세
-        if any(w in lowered for w in ["시세", "얼마", "가격"]):
-            name = extract_item_name(content)
-            market_cog = self.bot.get_cog("MarketCog")
-            if market_cog:
-                return await market_cog.search_and_reply(msg, name)
+        # 자연어(시세/날씨)는 bot.py에서만 처리
+        if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
+            return
 
-        # 자연어 날씨
-        if any(w in lowered for w in ["날씨", "기상", "어때"]):
-            city = extract_city_name(content)
-            weather_cog = self.bot.get_cog("WeatherCog")
-            if weather_cog:
-                return await weather_cog.reply_weather_from_message(msg, city)
-
-        # 일반 감정 + AI 대답
+        # 감정 처리
         delta = 0
         tone = "normal"
         if any(b in lowered for b in BAD_WORDS):
@@ -153,8 +142,9 @@ class AIChatCog(commands.Cog):
             inc_usage()
             reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
 
-        parts = [f"{mention_prefix}{reply}"]
-        await msg.reply("\n".join(parts), mention_author=False)
+        await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
+
+
 
 
 async def setup(bot):
