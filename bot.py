@@ -31,6 +31,30 @@ bot = commands.Bot(
 @bot.event
 async def on_ready():
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
+    bot.loop.create_task(status_task())
+    
+
+# 상태 메세지 #
+import random
+import asyncio
+from discord import Activity, ActivityType
+
+async def status_task():
+    await bot.wait_until_ready()
+    statuses = [
+        "📦 장터게시판 보는 중",
+        "🌤️ 날씨 확인 중",
+        "🛠️ 제작하는 중",
+        "🎁 선물을 기다리는 중",
+        "❤️ 호감도 체크 중",
+        "😺 지피띠니랑 노는 중"
+    ]
+    while not bot.is_closed():
+        activity = Activity(type=ActivityType.watching, name=random.choice(statuses))
+        await bot.change_presence(activity=activity)
+        await asyncio.sleep(3600)  # 1시간 (초 단위)
+
+
 
 
 @bot.event
