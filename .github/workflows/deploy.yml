@@ -24,3 +24,8 @@ jobs:
             pip install -r requirements.txt --upgrade
             pm2 restart cherang
             echo 🚀 Deploy complete!
+            on:
+  schedule:
+    - cron: "0 19 * * *"  # 한국시간 새벽 4시(UTC+9)
+  workflow_dispatch:
+
