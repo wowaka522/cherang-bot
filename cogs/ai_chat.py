@@ -1,4 +1,3 @@
-# cogs/ai_chat.py
 import os
 import json
 import random
@@ -99,55 +98,13 @@ def call_deepseek_reply(user_name: str, content: str, love: int, tone: str) -> s
         return "잠깐 멍해졌어. 다시 말해."
 
 
-async def call_deepseek_proactive(love: int) -> str:
-    if not DEEPSEEK_API_KEY:
-        return "…아무것도 아냐. 그냥."
-
-    prompts = [
-        "너는 '체랑봇'이고 쿨데레 고양이 수인 느낌.\n"
-        "관심 없는 척, 건조하고 시니컬.\n"
-        "먼저 말 거는 상황. 한 문장.\n"
-        "이모지 금지. 멘션 금지.\n"
-    ]
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": prompts[0]},
-            {
-                "role": "assistant",
-                "content": f"(상대 호감도: {love})\n짧고 툭 던지는 한 문장."
-            },
-        ],
-        "max_tokens": 50,
-    }
-
-    try:
-        r = requests.post(
-            "https://api.deepseek.com/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-            json=payload,
-            timeout=10,
-        )
-        data = r.json()
-        return data["choices"][0]["message"]["content"].strip()
-    except:
-        fallback = [
-            "말 안 해?",
-            "왜 가만히 있어.",
-            "…뭐.",
-            "심심한데.",
-        ]
-        return random.choice(fallback)
-
-
 class AIChatCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     async def handle_ai_chat(self, message: discord.Message):
         if message.author.bot:
-            return True  # 처리로 간주
+            return
 
         content = message.content.strip()
         lowered = content.lower()
@@ -176,8 +133,6 @@ class AIChatCog(commands.Cog):
         await message.reply(f"{mention_prefix}{reply}", mention_author=False)
 
         LAST_CHAT_TIME[message.author.id] = (message.channel.id, datetime.utcnow().timestamp())
-        self.bot.loop.create_task(call_deepseek_proactive(love))
-        return True
 
 
 async def setup(bot: commands.Bot):
