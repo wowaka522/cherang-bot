@@ -62,35 +62,35 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
-    # Slash 무시
+    # Slash 명령은 interaction 이벤트로 따로 처리됨 → 무시
     if message.interaction is not None:
         return
 
     lowered = message.content.lower()
+    chat = bot.get_cog("AIChatCog")
 
-    # 자연어 Market
+    # 🔥 AIChat 전용 채널에서만 처리 (Q2 = A)
+    if chat and message.channel.id == AI_CHAT_CHANNEL_ID:
+        handled = await chat.handle_ai_chat(message)
+        if handled:
+            return  # AIChat이 처리했으면 바로 종료
+
+    # 🌟 자연어 가격
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
-        return
+        return  # 처리 후 종료!
 
-    # 자연어 Weather
+    # 🌟 자연어 날씨
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
-        return
+        return  # 처리 후 종료!
 
-    # AIChat이 처리할 방
-    chat = bot.get_cog("AIChatCog")
-    if chat and message.channel.id == AI_CHAT_CHANNEL_ID:
-        return await chat.on_message(message)  # 💥 여기서 처리 끝!
-
-    # 명령어는 여기서만!!
+    # 🎯 명령어는 마지막에 딱 1번만
     await bot.process_commands(message)
-
-
 
 
     chat = bot.get_cog("AIChatCog")
