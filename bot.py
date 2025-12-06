@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+load_dotenv()
 
 from utils.raphael import ensure_raphael_ready
 
