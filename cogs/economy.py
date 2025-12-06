@@ -145,5 +145,5 @@ class EconomyCog(commands.Cog):
         await ctx.reply(f"{result} 총 {data['money']} 길이야.", mention_author=False)
 
 
-async def setup(bot):
-    await bot.add_cog(EconomyCog(bot))
+async def setup(bot: commands.Bot):
+    pass

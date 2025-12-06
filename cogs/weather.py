@@ -116,6 +116,6 @@ class WeatherCog(commands.Cog):
             await inter.followup.send(embed=embed, files=files)
 
 
-async def setup(bot):
-    await bot.add_cog(WeatherCog(bot))
+async def setup(bot: commands.Bot):
+    pass
     print("✨ WeatherCog Loaded!")

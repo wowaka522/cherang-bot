@@ -160,6 +160,6 @@ class SimilarButton(discord.ui.Button):
         )
 
 
-async def setup(bot):
-    await bot.add_cog(MarketCog(bot))
+async def setup(bot: commands.Bot):
+    pass
     print("✨ MarketCog Loaded!")

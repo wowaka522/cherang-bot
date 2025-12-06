@@ -61,6 +61,5 @@ class AdminCog(commands.Cog):
 
         print("PM2 Restart:", r_out.decode(), r_err.decode())
 
-
-async def setup(bot):
-    await bot.add_cog(AdminCog(bot))
+async def setup(bot: commands.Bot):
+    pass
