@@ -185,12 +185,13 @@ class AIChatCog(commands.Cog):
             return
 
         content = msg.content.strip()
-        uid = str(msg.author.id)
         lowered = content.lower()
 
-        # 자연어 명령어는 bot.py에서 처리
+        # 자연어 Market/Weather는 이쪽에서 무시
         if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
             return
+
+        uid = str(msg.author.id)
 
         delta = 0
         tone = "normal"
