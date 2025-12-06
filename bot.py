@@ -84,16 +84,12 @@ async def on_message(message: discord.Message):
     # AIChatCog 응답 처리
     chat = bot.get_cog("AIChatCog")
     if chat:
+        # AIChatCog에서 이미 응답을 처리했다면, 이후 코드 실행을 막습니다.
         await chat.on_message(message)  # AI 응답 처리 후, 명령어 처리를 하지 않음
         return  # AI 응답 후 STOP! 더 이상 처리하지 않음
 
     # 명령어 처리 (AIChatCog의 on_message를 처리하지 않았다면 여기서 처리)
     await bot.process_commands(message)
-
-
-
-
-
 
 
 
