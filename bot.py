@@ -31,6 +31,7 @@ bot = commands.Bot(
 
 @bot.event
 async def on_ready():
+    print("📌 Loaded COGs:", list(bot.cogs.keys()))
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
     bot.loop.create_task(status_task())
     
@@ -84,7 +85,6 @@ async def on_message(message: discord.Message):
 
     # AIChatCog listener가 처리하게 그냥 넘김 👇
     await bot.process_commands(message)
-
 
 
 
