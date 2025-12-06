@@ -1,0 +1,32 @@
+# === Confidential ===
+.env
+config.json
+
+# === Database (personal data) ===
+data/stats_db.json
+
+# === Cache ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === Logs ===
+*.log
+
+# === Raphael build output ===
+raphael/raphael-cli.exe
+raphael/raphael-rs/target/
+
+# === Temp ===
+backup/
+*.tmp
+*.bak
+
+# === OS ===
+.DS_Store
+Thumbs.db
