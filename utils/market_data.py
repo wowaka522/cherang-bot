@@ -5,8 +5,13 @@ import io
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import matplotlib
-matplotlib.rc('font', family='Malgun Gothic')
+
+# ===== 한글 폰트 설정 =====
+matplotlib.rc('font', family='Noto Sans CJK KR')
 matplotlib.rcParams['axes.unicode_minus'] = False
+
+import matplotlib.pyplot as plt
+
 
 
 # ===== 데이터 파일 경로 =====
