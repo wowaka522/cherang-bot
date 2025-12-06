@@ -25,25 +25,38 @@ class MarketCog(commands.Cog):
         self.bot = bot
 
     # Slash 호출 전용 응답
-    async def _send_slash(self, interaction, embed, file, view):
+    async def _send_slash(self, interaction, embed, file=None, view=None):
         try:
-            return await interaction.followup.send(
+            # 먼저 Embed 응답 (그래프 기다리지 않게!)
+            await interaction.followup.send(
                 embed=embed,
-                file=file if file else None,
                 view=view if view else None,
                 ephemeral=False
             )
+
+            # 파일 있으면 뒤에 첨부
+            if file:
+                await interaction.followup.send(file=file)
+
         except Exception:
-            return await interaction.response.send_message(embed=embed)
+            # 문제가 생기면 기본 응답으로 처리
+            await interaction.response.send_message(embed=embed)
 
     # 자연어 전용 응답
-    async def _send_msg(self, msg, embed, file, view):
-        return await msg.reply(
+    async def _send_msg(self, msg, embed, file=None, view=None):
+        # Embed 먼저!
+        sent = await msg.reply(
             embed=embed,
-            file=file if file else None,
             view=view if view else None,
             mention_author=False
         )
+
+        # 파일 있으면 추가 전송
+        if file:
+            await msg.reply(file=file, mention_author=False)
+
+        return sent
+
 
     # ======================
     # /시세
