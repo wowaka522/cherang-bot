@@ -32,11 +32,6 @@ bot = commands.Bot(
 async def on_ready():
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
 
-    synced = await bot.tree.sync()
-    print(f"🔄 슬래시 명령 싱크 완료: {len(synced)}개")
-    print("📌 현재 Slash 명령:")
-    for cmd in synced:
-        print(" -", cmd.name)
 
 @bot.event
 async def on_message(message: discord.Message):
