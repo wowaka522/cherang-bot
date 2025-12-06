@@ -50,10 +50,16 @@ async def on_message(message: discord.Message):
         if market:
             return await market.search_and_reply(message)
 
+        # Weather 자연어 체크
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
+        # Slash 명령어 메시지는 무시
+        if message.content.startswith("/"):
+            return
+
         weather = bot.get_cog("WeatherCog")
         if weather:
             return await weather.reply_weather_from_message(message)
+
 
     chat = bot.get_cog("AIChatCog")
     if chat:
