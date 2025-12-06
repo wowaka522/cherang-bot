@@ -12,7 +12,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 NOTICE_URL = "https://www.ff14.co.kr/news/notice"
+EVENT_URL = "https://www.ff14.co.kr/news/event"  # 이벤트 공지 URL 추가
 NOTICE_DATA_PATH = "data/last_notice_id.txt"
+EVENT_DATA_PATH = "data/last_event_id.txt"  # 이벤트 공지 ID 저장 경로
 NOTICE_CHANNEL_ID = int(os.getenv("NOTICE_CHANNEL_ID", "0"))
 
 CHECK_TIMES = [time(12, 30)]  # 기본 체크: 12:30
@@ -27,22 +29,22 @@ class NoticeMonitorCog(commands.Cog):
     def cog_unload(self):
         self.check_notice.cancel()
 
-    def load_last_id(self) -> int:
-        if os.path.exists(NOTICE_DATA_PATH):
-            return int(open(NOTICE_DATA_PATH).read())
+    def load_last_id(self, file_path: str) -> int:
+        if os.path.exists(file_path):
+            return int(open(file_path).read())
         return 0
 
-    def save_last_id(self, nid: int):
-        with open(NOTICE_DATA_PATH, "w") as f:
+    def save_last_id(self, file_path: str, nid: int):
+        with open(file_path, "w") as f:
             f.write(str(nid))
 
-    def fetch_latest_notice(self):
-        r = requests.get(NOTICE_URL)
+    def fetch_latest_notice(self, url: str):
+        r = requests.get(url)
         soup = BeautifulSoup(r.text, "html.parser")
 
         first = soup.select_one(".news-list tbody tr")
         if not first:
-            return None, None, None
+            return None, None, None, None
 
         cols = first.find_all("td")
         notice_id = int(cols[0].text.strip())
@@ -67,16 +69,22 @@ class NoticeMonitorCog(commands.Cog):
             if now.hour not in UPDATE_HOURS:
                 return
 
-        notice_id, title, category, link = self.fetch_latest_notice()
-        if not notice_id:
-            return
+        # 공지와 이벤트 URL 각각 처리
+        notice_id, title, category, link = self.fetch_latest_notice(NOTICE_URL)
+        event_id, event_title, event_category, event_link = self.fetch_latest_notice(EVENT_URL)
 
-        last_id = self.load_last_id()
-        if notice_id <= last_id:
-            return  # 새 공지 없음
+        # 새 공지 및 이벤트 확인 후 처리
+        last_notice_id = self.load_last_id(NOTICE_DATA_PATH)
+        if notice_id and notice_id > last_notice_id:
+            self.save_last_id(NOTICE_DATA_PATH, notice_id)
+            await self.send_notification(notice_id, title, category, link)
 
-        self.save_last_id(notice_id)
+        last_event_id = self.load_last_id(EVENT_DATA_PATH)
+        if event_id and event_id > last_event_id:
+            self.save_last_id(EVENT_DATA_PATH, event_id)
+            await self.send_notification(event_id, event_title, event_category, event_link)
 
+    async def send_notification(self, notice_id, title, category, link):
         # 알림 전송
         channel = self.bot.get_channel(NOTICE_CHANNEL_ID)
         if channel:
