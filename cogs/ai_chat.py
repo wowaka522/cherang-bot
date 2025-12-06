@@ -11,6 +11,9 @@ import requests
 from discord.ext import commands
 from dotenv import load_dotenv
 
+print("📍 ai_chat.py imported")
+
+
 from utils.love_db import change_user_love, get_user_love
 from utils.text_cleaner import extract_item_name, extract_city_name
 
