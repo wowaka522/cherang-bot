@@ -35,40 +35,32 @@ async def on_ready():
 
 @bot.event
 async def on_message(message: discord.Message):
-    if message.author.bot:
-        return
-    
-    # 봇 메시지 무시
+    # 봇 메시지는 무시
     if message.author.bot:
         return
 
-    # Slash 명령 메시지 무시
+    # Slash 명령이면 완전 무시 (중복 방지)
     if message.interaction is not None:
         return
 
-
-    # Slash command는 여기서 패스
-    if message.content.startswith("/"):
-        await bot.process_commands(message)
-        return
-
-    lowered = message.content.lower()
-
     # 자연어 Market
+    lowered = message.content.lower()
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
-        return
+        return  # 자연어 응답 후 STOP!
 
     # 자연어 Weather
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
-        return
+        return  # STOP!
 
+    # 자연어가 아니면 → 남은 명령어(프리픽스) 처리
     await bot.process_commands(message)
+
 
 
 
