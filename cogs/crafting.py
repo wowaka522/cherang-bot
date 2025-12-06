@@ -316,6 +316,4 @@ class CraftingCog(commands.Cog):
 # ======================================================
 async def setup(bot):
     ensure_raphael_ready()
-    pass
-
-
+    await bot.add_cog(CraftingCog(bot))

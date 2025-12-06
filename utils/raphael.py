@@ -350,5 +350,3 @@ def get_player_status(uid: str):
     jobs = u.get("jobs", {})
     stats = jobs.get(last, {"craft": 0, "control": 0, "cp": 0, "job_level": 1})
     return last, stats
-
-
