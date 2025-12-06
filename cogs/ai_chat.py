@@ -194,10 +194,10 @@ class AIChatCog(commands.Cog):
             return
 
         # 키워드 조건
-        TRIGGERS = ["체랑", "야", "냐", "뭐해", "응"]
+        TRIGGERS = ["체랑", "체랑봇", "체랑냥", "냥이",]
         if not any(w in lowered for w in TRIGGERS):
             return
-        
+            
         uid = str(msg.author.id)
 
         delta = 0
