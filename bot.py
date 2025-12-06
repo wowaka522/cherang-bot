@@ -6,10 +6,18 @@ from dotenv import load_dotenv
 
 from utils.raphael import ensure_raphael_ready
 
-load_dotenv()
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# .env 파일을 bot.py가 있는 폴더에서 강제 로드
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
     raise RuntimeError("❌ .env에 DISCORD_TOKEN 없음")
+
 
 intents = discord.Intents.default()
 intents.message_content = True
