@@ -42,6 +42,15 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author.bot:
         return
+    
+    # 봇 메시지 무시
+    if message.author.bot:
+        return
+
+    # Slash 명령 메시지 무시
+    if message.interaction is not None:
+        return
+
 
     # Slash command는 여기서 패스
     if message.content.startswith("/"):
