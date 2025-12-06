@@ -56,7 +56,6 @@ async def status_task():
 
 
 
-
 @bot.event
 async def on_message(message: discord.Message):
     # 봇 메시지는 무시
@@ -82,8 +81,19 @@ async def on_message(message: discord.Message):
             await weather.reply_weather_from_message(message)
         return  # STOP!
 
-    # 자연어가 아니면 → 남은 명령어(프리픽스) 처리
-    await bot.process_commands(message)
+    # 자연어 처리 후 남은 명령어(프리픽스) 처리
+    await bot.process_commands(message) # <- 명령어 처리 (다른 코그의 @commands.command 처리)
+    
+    # 🛑 
+    # chat = bot.get_cog("AIChatCog")
+    # if chat:
+    #    return await chat.on_message(message) # <- 이 3줄을 완전히 삭제합니다.
+    # 🛑 
+
+    # AIChatCog의 on_message 리스너는 이제 디스코드 이벤트를 통해 자동으로 실행됩니다.
+    # 명령어가 아닌 일반 메시지에 대한 AI 응답 처리는 AIChatCog 내에서 알아서 수행합니다.
+    # 이 아래의 await bot.process_commands(message)도 필요 없으므로 삭제합니다.
+    # await bot.process_commands(message)
 
 
 
