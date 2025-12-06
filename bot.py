@@ -87,11 +87,6 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
-
-    chat = bot.get_cog("AIChatCog")
-    if chat:
-        return await chat.on_message(message)
-
     await bot.process_commands(message)
 
 async def setup_extensions():
