@@ -180,6 +180,7 @@ class AIChatCog(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         print("🔥 AIChatCog fired")
+
         if msg.author.bot:
             return
         if msg.channel.id != AI_CHAT_CHANNEL_ID:
@@ -188,10 +189,14 @@ class AIChatCog(commands.Cog):
         content = msg.content.strip()
         lowered = content.lower()
 
-        # 자연어 Market/Weather는 이쪽에서 무시
+        # 시세/날씨 무시
         if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
             return
 
+        # 👉 AI 챗 트리거 키워드 검사
+        TRIGGERS = ["체랑", "대화", "뭐해", "응", "야", "냐", "안녕"]
+        if not any(w in lowered for w in TRIGGERS):
+            return
         uid = str(msg.author.id)
 
         delta = 0
