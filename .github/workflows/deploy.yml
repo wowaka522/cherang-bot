@@ -1,4 +1,4 @@
-name: Deploy Cherang Bot
+name: 🚀 Deploy to GCP Windows VM (cherang-bot)
 
 on:
   push:
@@ -7,16 +7,20 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Setup SSH key
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Deploy to Windows VM
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.HOST }} "powershell -ExecutionPolicy Bypass -File C:\cherang-bot\deploy.ps1"
+      - name: Deploy to Windows VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd "C:\Users\gs554\Desktop\자료\디스코드 봇\cherang-bot"
+            git pull origin main
+            pip install -r requirements.txt --upgrade
+            pm2 restart cherang
+            echo 🚀 Deploy complete!
