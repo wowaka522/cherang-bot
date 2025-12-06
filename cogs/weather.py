@@ -18,9 +18,6 @@ from ffxiv_weather import (
 from utils.text_cleaner import extract_city_name
 
 
-GUILD_ID = 1446298852813439068  # 네 테스트 서버 ID 유지
-
-
 class WeatherCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
