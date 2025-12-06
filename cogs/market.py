@@ -1,4 +1,3 @@
-# cogs/market.py
 import discord
 from discord import app_commands, Embed
 from discord.ext import commands
@@ -29,7 +28,7 @@ class MarketCog(commands.Cog):
         self.bot = bot
 
     # ======================
-    # 공통: Slash용 응답 (defer 전용 안전 버전)
+    # Slash 응답 전용 (안전 + 그래프 + 버튼 유지)
     # ======================
     async def _send_slash(
         self,
@@ -38,34 +37,23 @@ class MarketCog(commands.Cog):
         file: discord.File | None = None,
         view: discord.ui.View | None = None,
     ):
-        """
-        슬래시 명령 전용 응답:
-        - defer() 호출 이후 반드시 followup.send()만 사용!
-        - 중복 response 방지
-        """
         try:
-            # Embed + 버튼 먼저
+            # 첫 응답에 embed + 버튼 + 파일 모두 포함
             await interaction.followup.send(
                 embed=embed,
+                file=file if file else None,
                 view=view if view else None,
                 ephemeral=False,
             )
-
-            # 파일은 따로 followup 전송
-            if file:
-                await interaction.followup.send(file=file)
-
         except Exception as e:
             print(f"[Slash Send Error] {e}")
-            # fallback: 그래도 최소 embed라도 보내기
             try:
                 await interaction.followup.send(embed=embed)
             except:
                 pass
 
-
     # ======================
-    # 공통: 자연어용 응답
+    # 자연어 응답 (문자 메시지)
     # ======================
     async def _send_msg(
         self,
@@ -74,11 +62,6 @@ class MarketCog(commands.Cog):
         file: discord.File | None = None,
         view: discord.ui.View | None = None,
     ):
-        """
-        일반 채팅(자연어)용 응답:
-        - 먼저 embed + 버튼
-        - 그 다음 파일(그래프) 따로
-        """
         sent = await msg.reply(
             embed=embed,
             view=view if view else None,
@@ -94,14 +77,13 @@ class MarketCog(commands.Cog):
         return sent
 
     # ======================
-    # /시세 슬래시 커맨드
+    # /시세 커맨드
     # ======================
     @app_commands.command(
         name="시세",
         description="한국 서버 FF14 아이템 시세 조회",
     )
     async def price_cmd(self, interaction: discord.Interaction, 아이템이름: str):
-        # 디코한테 "생각중..." 알리기
         await interaction.response.defer(thinking=True)
 
         item_name = extract_item_name(아이템이름)
@@ -113,7 +95,7 @@ class MarketCog(commands.Cog):
         await self._send_slash(interaction, embed, file, view)
 
     # ======================
-    # 자연어 시세 (ex. "황금장어 시세 알려줘")
+    # 자연어 시세 (명령 아닌 경우)
     # ======================
     async def search_and_reply(self, msg: discord.Message, *_):
         item_name = extract_item_name(msg.content)
@@ -125,7 +107,7 @@ class MarketCog(commands.Cog):
         await self._send_msg(msg, embed, file, view)
 
     # ======================
-    # 시세 Embed + 그래프 + 비슷한 아이템 버튼 생성
+    # Embed + 그래프 + 버튼 생성
     # ======================
     def build_price_view(self, item_name: str):
         item_id, real_name, similar = search_item(item_name)
@@ -133,14 +115,12 @@ class MarketCog(commands.Cog):
         if not item_id:
             return None, None, None, f"❌ '{item_name}'과 비슷한 아이템을 찾지 못했어."
 
-        # --- 기본 Embed ---
         embed = Embed(
             title=real_name,
             description="🇰🇷 한국 서버 시세",
             color=0xFFD700,
         )
 
-        # 아이콘 썸네일
         icon = KR_ICONS.get(str(item_id))
         if icon:
             embed.set_thumbnail(
@@ -148,11 +128,8 @@ class MarketCog(commands.Cog):
                 + icon.replace("ui/icon/", "i/").replace(".tex", ".png")
             )
 
-        # 상세 설명 / 카테고리
         det = KR_DETAIL.get(str(item_id), {})
-        desc = det.get("desc", "")
-        if not desc:
-            desc = "설명이 없어요."
+        desc = det.get("desc", "") or "설명이 없어요."
 
         embed.add_field(
             name="📄 설명",
@@ -165,12 +142,11 @@ class MarketCog(commands.Cog):
             inline=False,
         )
 
-        # --- 월드별 최소가 계산 ---
+        # 월드별 최저가
         prices = []
         for server_name, world_id in KR_WORLDS.items():
             data = get_price(world_id, item_id)
-            hq = None
-            nq = None
+            hq = nq = None
 
             if data and data.get("listings"):
                 for it in data["listings"]:
@@ -182,18 +158,11 @@ class MarketCog(commands.Cog):
                     else:
                         nq = min(nq, price) if nq is not None else price
 
-            prices.append(
-                {
-                    "server": server_name,
-                    "hq": hq,
-                    "nq": nq,
-                    "wid": world_id,
-                }
-            )
+            prices.append({"server": server_name, "hq": hq, "nq": nq, "wid": world_id})
 
-        # --- Embed에 시세 출력 ---
+        # 시세 출력
         for p in prices:
-            lines: list[str] = []
+            lines = []
             if p["hq"] is not None:
                 lines.append(f"✨ HQ: **{format_price(p['hq'])}**")
             if p["nq"] is not None:
@@ -205,9 +174,9 @@ class MarketCog(commands.Cog):
                 inline=False,
             )
 
-        # --- 그래프 생성 (첫 번째 유효 월드 기준) ---
+        # 그래프 생성
         file = None
-        ref = next((p for p in prices if p["hq"] is not None or p["nq"] is not None), None)
+        ref = next((p for p in prices if p["hq"] or p["nq"]), None)
         if ref:
             buf = build_history_chart(ref["server"], ref["wid"], item_id)
             if buf:
@@ -215,7 +184,7 @@ class MarketCog(commands.Cog):
                 embed.set_image(url="attachment://chart.png")
                 embed.set_footer(text=f"그래프: {ref['server']} 최근 7일")
 
-        # --- 비슷한 아이템 버튼 ---
+        # 비슷한 아이템 버튼
         view = None
         if similar:
             view = discord.ui.View()
@@ -231,27 +200,17 @@ class SimilarButton(discord.ui.Button):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        # 버튼 눌렀을 때도 "생각중..." 먼저
         await interaction.response.defer(thinking=True)
-
         embed, file, view, error = self.cog.build_price_view(self.label)
 
         if error:
             return await interaction.followup.send(error, ephemeral=True)
 
-        # 버튼이 붙어있는 "그 메시지"를 수정
-        # (original_response 말고 edit_message를 쓰는 게 안전함)
-        if file:
-            await interaction.edit_original_response(
-                embed=embed,
-                attachments=[file],
-                view=view,
-            )
-        else:
-            await interaction.edit_original_response(
-                embed=embed,
-                view=view,
-            )
+        await interaction.edit_original_response(
+            embed=embed,
+            attachments=[file] if file else [],
+            view=view,
+        )
 
 
 async def setup(bot: commands.Bot):
