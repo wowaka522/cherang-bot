@@ -43,22 +43,29 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
+    # Slash command는 여기서 패스
+    if message.content.startswith("/"):
+        await bot.process_commands(message)
+        return
+
     lowered = message.content.lower()
 
+    # 자연어 Market
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
-            return await market.search_and_reply(message)
+            await market.search_and_reply(message)
+        return
 
-        # Weather 자연어 체크
+    # 자연어 Weather
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
-        # Slash 명령어 메시지는 무시
-        if message.content.startswith("/"):
-            return
-
         weather = bot.get_cog("WeatherCog")
         if weather:
-            return await weather.reply_weather_from_message(message)
+            await weather.reply_weather_from_message(message)
+        return
+
+    await bot.process_commands(message)
+
 
 
     chat = bot.get_cog("AIChatCog")

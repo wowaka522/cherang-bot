@@ -30,7 +30,7 @@ class AdminCog(commands.Cog):
 
         # 서버에서 update_raphael.bat 실행
         process = await asyncio.create_subprocess_shell(
-            r'updater\update_raphael.bat',
+            r"cd data/raphael-rs && git pull",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -47,7 +47,10 @@ class AdminCog(commands.Cog):
             "✅ 업데이트 완료! `pm2 restart cherang` 해줘",
             ephemeral=True,
         )
+        await asyncio.create_subprocess_shell("pm2 restart cherang")
+
 
 
 async def setup(bot):
     await bot.add_cog(AdminCog(bot))
+
