@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import matplotlib
 
 # ===== 한글 폰트 설정 =====
+font_path = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
 matplotlib.rc('font', family='Noto Sans CJK KR')
 matplotlib.rcParams['axes.unicode_minus'] = False
 
