@@ -62,6 +62,7 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
+    # Slash 무시
     if message.interaction is not None:
         return
 
@@ -81,15 +82,14 @@ async def on_message(message: discord.Message):
             await weather.reply_weather_from_message(message)
         return
 
-    # AI Chat
+    # AIChat이 처리할 방
     chat = bot.get_cog("AIChatCog")
-    if chat:
-        handled = await chat.on_message(message)
-        if handled:
-            return
+    if chat and message.channel.id == AI_CHAT_CHANNEL_ID:
+        return await chat.on_message(message)  # 💥 여기서 처리 끝!
 
-    # 명령어 처리 딱! 한 번만
+    # 명령어는 여기서만!!
     await bot.process_commands(message)
+
 
 
 

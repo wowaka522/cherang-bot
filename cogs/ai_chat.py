@@ -177,7 +177,6 @@ class AIChatCog(commands.Cog):
 
         IS_WAITING.discard(user.id)
 
-    @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
