@@ -102,7 +102,6 @@ async def setup_extensions():
     await bot.load_extension("cogs.economy")
     await bot.load_extension("cogs.help_info")
     await bot.load_extension("cogs.admin")
-    await bot.load_extension("cogs.notice_monitor")
 
 
 async def main():
