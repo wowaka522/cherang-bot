@@ -221,5 +221,6 @@ class AIChatCog(commands.Cog):
         self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
 
 
+
 async def setup(bot):
     await bot.add_cog(AIChatCog(bot))
