@@ -7,12 +7,11 @@ from datetime import datetime
 from pathlib import Path
 
 import discord
-import requests
 from discord.ext import commands
 from dotenv import load_dotenv
+import requests
 
 from utils.love_db import change_user_love, get_user_love
-from utils.text_cleaner import extract_item_name, extract_city_name
 
 load_dotenv()
 
@@ -25,7 +24,7 @@ GOOD_WORDS = ["고마워", "사랑해", "좋아해", "예쁘네", "귀여워"]
 DAILY_LIMIT = 50
 USAGE_PATH = Path("data") / "ai_chat_usage.json"
 
-LAST_CHAT_TIME = {}
+LAST_CHAT_TIME: dict[int, tuple[int, float]] = {}
 IS_WAITING = set()
 
 
@@ -35,7 +34,7 @@ def _load_usage():
         return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
     try:
         return json.loads(USAGE_PATH.read_text("utf-8"))
-    except Exception:
+    except:
         return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
 
 
@@ -43,7 +42,7 @@ def _save_usage(data: dict):
     USAGE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), "utf-8")
 
 
-def can_use_ai() -> bool:
+def can_use_ai():
     today = datetime.now().strftime("%Y-%m-%d")
     data = _load_usage()
     if data.get("date") != today:
@@ -101,24 +100,23 @@ def call_deepseek_reply(user_name: str, content: str, love: int, tone: str) -> s
 
 
 async def call_deepseek_proactive(love: int) -> str:
-    """먼저 말 걸기 멘트 생성"""
     if not DEEPSEEK_API_KEY:
         return "…아무것도 아냐. 그냥."
 
-    system_prompt = (
+    prompts = [
         "너는 '체랑봇'이고 쿨데레 고양이 수인 느낌.\n"
-        "상대에게 먼저 말 걸려고 하는 상황.\n"
         "관심 없는 척, 건조하고 시니컬.\n"
-        "한 문장으로만. 이모지 금지. 멘션 금지.\n"
-    )
+        "먼저 말 거는 상황. 한 문장.\n"
+        "이모지 금지. 멘션 금지.\n"
+    ]
 
     payload = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": prompts[0]},
             {
                 "role": "assistant",
-                "content": f"(상대 호감도: {love})\n짧게 한 문장 만들어."
+                "content": f"(상대 호감도: {love})\n짧고 툭 던지는 한 문장."
             },
         ],
         "max_tokens": 50,
@@ -135,11 +133,10 @@ async def call_deepseek_proactive(love: int) -> str:
         return data["choices"][0]["message"]["content"].strip()
     except:
         fallback = [
-            "뭐야, 갑자기 잠수?",
-            "말 안 하면… 나 심심한데.",
-            "한마디도 안 해?",
-            "대답해도 되고. 말고.",
-            "왜 아무 말 없어."
+            "말 안 해?",
+            "왜 가만히 있어.",
+            "…뭐.",
+            "심심한데.",
         ]
         return random.choice(fallback)
 
@@ -148,51 +145,17 @@ class AIChatCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def _maybe_start_chat(self, channel: discord.TextChannel, user: discord.Member, love: int):
-        if love < 10:
-            return
-        if user.id in IS_WAITING:
-            return
-        if channel.id != AI_CHAT_CHANNEL_ID:
-            return
+    async def handle_ai_chat(self, message: discord.Message):
+        if message.author.bot:
+            return True  # 처리로 간주
 
-        if random.random() > 0.05:  # 5% 확률
-            return
-
-        IS_WAITING.add(user.id)
-        await asyncio.sleep(random.randint(300, 600))  # 5~10분
-
-        data = LAST_CHAT_TIME.get(user.id)
-        if not data:
-            IS_WAITING.discard(user.id)
-            return
-
-        channel_id, last_ts = data
-        if channel_id != channel.id:
-            IS_WAITING.discard(user.id)
-            return
-
-        msg = await call_deepseek_proactive(love)
-        await channel.send(f"{user.mention} {msg}")
-
-        IS_WAITING.discard(user.id)
-
-    async def on_message(self, msg: discord.Message):
-        if msg.author.bot:
-            return
-        if msg.channel.id != AI_CHAT_CHANNEL_ID:
-            return
-
-        content = msg.content.strip()
-        uid = str(msg.author.id)
+        content = message.content.strip()
         lowered = content.lower()
 
-        # 자연어 명령어는 bot.py에서 처리
-        if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
-            return
-
+        uid = str(message.author.id)
         delta = 0
         tone = "normal"
+
         if any(b in lowered for b in BAD_WORDS):
             delta -= 2
             tone = "angry"
@@ -203,20 +166,19 @@ class AIChatCog(commands.Cog):
         change_user_love(uid, delta)
         love = get_user_love(uid)
 
-        use_ai = can_use_ai()
-        mention_prefix = msg.author.mention + " " if love >= 10 else ""
-
-        if not use_ai:
+        if not can_use_ai():
             reply = "오늘은 여기까지. 내일 다시 불러."
         else:
             inc_usage()
-            reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
+            reply = call_deepseek_reply(message.author.display_name, content, love, tone)
 
-        await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
+        mention_prefix = message.author.mention + " " if love >= 10 else ""
+        await message.reply(f"{mention_prefix}{reply}", mention_author=False)
 
-        LAST_CHAT_TIME[msg.author.id] = (msg.channel.id, datetime.utcnow().timestamp())
-        self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
+        LAST_CHAT_TIME[message.author.id] = (message.channel.id, datetime.utcnow().timestamp())
+        self.bot.loop.create_task(call_deepseek_proactive(love))
+        return True
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(AIChatCog(bot))
