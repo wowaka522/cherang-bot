@@ -1,3 +1,4 @@
+# cogs/market.py
 import discord
 from discord import app_commands, Embed
 from discord.ext import commands
@@ -23,33 +24,26 @@ class MarketCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ======================
-    # UI Safe Sender
-    # ======================
-    async def _send_response(self, interaction_or_msg, embed, file, view):
+    # Slash 호출 전용 응답
+    async def _send_slash(self, interaction, embed, file, view):
         try:
-            # Slash 응답
-            if hasattr(interaction_or_msg, "followup"):
-                return await interaction_or_msg.followup.send(
-                    embed=embed,
-                    file=file if file else None,
-                    view=view if view else None,
-                    ephemeral=False
-                )
-            # 자연어 응답
-            else:
-                return await interaction_or_msg.reply(
-                    embed=embed,
-                    file=file if file else None,
-                    view=view if view else None,
-                    mention_author=False
-                )
+            return await interaction.followup.send(
+                embed=embed,
+                file=file if file else None,
+                view=view if view else None,
+                ephemeral=False
+            )
         except Exception:
-            # 마지막 안전 장치: embed만이라도 보냄
-            if hasattr(interaction_or_msg, "followup"):
-                return await interaction_or_msg.followup.send(embed=embed)
-            else:
-                return await interaction_or_msg.reply(embed=embed)
+            return await interaction.response.send_message(embed=embed)
+
+    # 자연어 전용 응답
+    async def _send_msg(self, msg, embed, file, view):
+        return await msg.reply(
+            embed=embed,
+            file=file if file else None,
+            view=view if view else None,
+            mention_author=False
+        )
 
     # ======================
     # /시세
@@ -63,7 +57,7 @@ class MarketCog(commands.Cog):
         if error:
             return await interaction.followup.send(error, ephemeral=True)
 
-        await self._send_response(interaction, embed, file, view)
+        await self._send_slash(interaction, embed, file, view)
 
     # ======================
     # 자연어 시세
@@ -75,17 +69,13 @@ class MarketCog(commands.Cog):
         if error:
             return await msg.reply(error, mention_author=False)
 
-        await self._send_response(msg, embed, file, view)
+        await self._send_msg(msg, embed, file, view)
 
     # ======================
     # Embed + 파일 + 버튼 생성
     # ======================
     def build_price_view(self, item_name: str):
-        print("=== PRICE DEBUG ===")
-        print("입력:", repr(item_name))
-
         item_id, real_name, similar = search_item(item_name)
-        print("검색 결과:", item_id, "/", real_name, "/", similar)
 
         if not item_id:
             return None, None, None, f"❌ '{item_name}'과 비슷한 아이템을 찾지 못했어."
@@ -119,10 +109,8 @@ class MarketCog(commands.Cog):
                 for it in data["listings"]:
                     price = it.get("pricePerUnit")
                     if price is None: continue
-                    if it.get("hq"):
-                        hq = min(hq, price) if hq else price
-                    else:
-                        nq = min(nq, price) if nq else price
+                    if it.get("hq"): hq = min(hq, price) if hq else price
+                    else: nq = min(nq, price) if nq else price
             prices.append({"server": s, "hq": hq, "nq": nq, "wid": wid})
 
         for p in prices:
@@ -162,7 +150,6 @@ class SimilarButton(discord.ui.Button):
         await interaction.response.defer(thinking=True)
 
         embed, file, view, error = self.cog.build_price_view(self.label)
-
         if error:
             return await interaction.followup.send(error)
 

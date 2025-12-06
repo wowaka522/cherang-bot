@@ -28,38 +28,29 @@ class WeatherCog(commands.Cog):
     @app_commands.command(name="날씨", description="파판14 지역 날씨를 보여준다냥")
     @app_commands.describe(지역="지역 일부를 입력해줘 (예: 림사 / 라노시아)")
     async def weather_cmd(self, interaction: discord.Interaction, 지역: str):
+        await interaction.response.defer(thinking=True)
         await self.send_weather_from_text(interaction, 지역, followup=False)
 
     # ==========================
-    # 자연어: AIChat에서 호출
+    # 자연어 처리
     # ==========================
-    async def reply_weather_from_message(self, msg: discord.Message, city: str = None):
+    async def reply_weather_from_message(self, msg: discord.Message):
         city = extract_city_name(msg.content)
         if not city:
             return await msg.reply("어디 날씨를 알려줘야 하는 건데?")
 
-        class DummyInteraction:
-            def __init__(self, msg):
-                self.msg = msg
-                self.followup = self
-
-            async def send(self, embed=None, files=None, **kwargs):
-                await self.msg.reply(embed=embed, files=files, mention_author=False)
-
-        dummy = DummyInteraction(msg)
-        await self.send_weather_from_text(dummy, city, followup=True)
+        await self.send_weather_from_text(msg, city, followup=True)
 
     # ==========================
-    # 공통 UI 처리
+    # 공통 처리
     # ==========================
-    async def send_weather_from_text(self, inter: discord.Interaction, text: str, followup: bool):
+    async def send_weather_from_text(self, inter, text: str, followup: bool):
         matches = find_zone_matches(text)
 
         if not matches:
-            return await inter.response.send_message(
-                f"❌ '{text}' 지역을 찾지 못했다냥.",
-                ephemeral=True
-            ) if not followup else await inter.followup.send(f"❌ '{text}' 지역을 찾지 못했다냥.")
+            if followup:
+                return await inter.reply(f"❌ '{text}' 지역을 찾지 못했다냥.", mention_author=False)
+            return await inter.followup.send(f"❌ '{text}' 지역을 찾지 못했다냥.", ephemeral=True)
 
         # 후보 여러 개 → 선택 메뉴
         if len(matches) > 1:
@@ -68,11 +59,7 @@ class WeatherCog(commands.Cog):
                 discord.SelectOption(label=to_korean_zone(z), value=z)
                 for z in matches[:25]
             ]
-            select = discord.ui.Select(
-                placeholder="지역을 선택해줘!",
-                options=options,
-                min_values=1, max_values=1,
-            )
+            select = discord.ui.Select(placeholder="지역을 선택해줘!", options=options)
             view.add_item(select)
 
             async def select_callback(inter2: discord.Interaction):
@@ -82,23 +69,17 @@ class WeatherCog(commands.Cog):
 
             select.callback = select_callback
 
-            return await inter.response.send_message(
-                "🔎 다음 중에서 선택해줘!",
-                view=view,
-                ephemeral=True,
-            ) if not followup else await inter.followup.send(
-                "🔎 다음 중에서 선택해줘!",
-                view=view,
-            )
+            if followup:
+                return await inter.reply("🔎 다음 중에서 선택해줘!", view=view, mention_author=False)
+            return await inter.followup.send("🔎 다음 중에서 선택해줘!", view=view, ephemeral=True)
 
-        # 1개면 바로 출력
         zone_key = matches[0]
-        await self.send_weather_embed(inter, zone_key, followup=followup)
+        await self.send_weather_embed(inter, zone_key, followup)
 
     # ==========================
-    # Embed 실제 출력
+    # Embed 출력
     # ==========================
-    async def send_weather_embed(self, inter: discord.Interaction, zone_key: str, followup: bool):
+    async def send_weather_embed(self, inter, zone_key: str, followup: bool):
         now_ms = int(time.time() * 1000)
 
         w_now = get_weather(zone_key)
@@ -118,7 +99,6 @@ class WeatherCog(commands.Cog):
             color=0x00AEEF,
         )
 
-        # 아이콘
         icon_filename = get_weather_icon_filename(w_now)
         icon_path = os.path.join("assets", "weather_icons", icon_filename)
         files = []
@@ -131,9 +111,9 @@ class WeatherCog(commands.Cog):
         embed.add_field(name="다다음", value=to_korean_weather(w_next2))
 
         if followup:
-            await inter.followup.send(embed=embed, files=files)
+            await inter.reply(embed=embed, files=files, mention_author=False)
         else:
-            await inter.response.send_message(embed=embed, files=files)
+            await inter.followup.send(embed=embed, files=files)
 
 
 async def setup(bot):
