@@ -61,34 +61,30 @@ async def status_task():
 @bot.event
 async def on_message(message: discord.Message):
     print("🌐 Main on_message fired")
+
     if message.author.bot:
         return
 
-    # Slash 응답이면 무시
     if message.interaction is not None:
         return
 
     lowered = message.content.lower()
 
-    # 자연어 Market
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
-        return   # 🔥 여기 무조건 STOP
+        return
 
-    # 자연어 Weather
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
-        return   # 🔥 여기서도 STOP
+        return
 
-    # ↘ 여기! 자연어도 명령도 아니면 챗봇이 처리
-    chat = bot.get_cog("ChatCog")  # 챗봇 담당 Cog 이름
-    if chat:
-        await chat.reply_chat(message)
-        return   # 🔥 중복방지 끝!
+    # AIChatCog listener가 처리하게 그냥 넘김 👇
+    await bot.process_commands(message)
+
 
 
 
