@@ -179,6 +179,7 @@ class AIChatCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
+        print("🔥 AIChatCog fired")
         if msg.author.bot:
             return
         if msg.channel.id != AI_CHAT_CHANNEL_ID:

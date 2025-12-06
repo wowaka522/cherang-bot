@@ -68,19 +68,14 @@ class MarketCog(commands.Cog):
         file: discord.File | None = None,
         view: discord.ui.View | None = None,
     ):
-        sent = await msg.reply(
-            embed=embed,
-            view=view if view else None,
-            mention_author=False,
-        )
-
+        kwargs = {"embed": embed, "mention_author": False}
         if file:
-            await msg.reply(
-                file=file,
-                mention_author=False,
-            )
+            kwargs["file"] = file
+        if view:
+            kwargs["view"] = view
 
-        return sent
+        await msg.reply(**kwargs)
+
 
     # ======================
     # /시세 커맨드

@@ -60,6 +60,7 @@ async def status_task():
 
 @bot.event
 async def on_message(message: discord.Message):
+    print("🌐 Main on_message fired")
     if message.author.bot:
         return
 
