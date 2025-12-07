@@ -221,7 +221,11 @@ class AIChatCog(commands.Cog):
             inc_usage()
             reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
 
-        await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
+        try:
+            await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
+        except Exception as e:
+            print("❌ Failed to send reply:", type(e).__name__, str(e))
+
 
         LAST_CHAT_TIME[msg.author.id] = (msg.channel.id, datetime.utcnow().timestamp())
         self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
