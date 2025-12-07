@@ -88,7 +88,7 @@ async def on_message(message: discord.Message):
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
-    # await bot.load_extension("cogs.market")
+    await bot.load_extension("cogs.market")
     await bot.load_extension("cogs.ai_chat")
     await bot.load_extension("cogs.crafting")
     await bot.load_extension("cogs.economy")
