@@ -219,7 +219,7 @@ class AIChatCog(commands.Cog):
             reply = "오늘은 여기까지. 내일 다시 불러."
         else:
             inc_usage()
-            reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
+            reply = call_deepseek_reply(msg.author.display_name, msg.content, love, tone)
 
         await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
 
