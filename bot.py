@@ -26,15 +26,23 @@ intents.message_content = True
 
 bot = commands.Bot(
     command_prefix="!",
-    intents=intents
+    intents=intents,
+    application_id=int(os.getenv("APPLICATION_ID"))
 )
 
 @bot.event
 async def on_ready():
+    await bot.wait_until_ready()
+    try:
+        synced = await bot.tree.sync()
+        print(f"Slash 명령어 싱크 완료: {len(synced)}개")
+    except Exception as e:
+        print("Slash Sync Error:", e)
+
     print("📌 Loaded COGs:", list(bot.cogs.keys()))
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
     bot.loop.create_task(status_task())
-    
+
 
 # 상태 메세지 #
 import random
@@ -88,18 +96,27 @@ async def on_message(message: discord.Message):
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
-    # await bot.load_extension("cogs.market")
+    await bot.load_extension("cogs.market")
     await bot.load_extension("cogs.ai_chat")
     await bot.load_extension("cogs.crafting")
     await bot.load_extension("cogs.economy")
     await bot.load_extension("cogs.help_info")
     await bot.load_extension("cogs.admin")
+    await bot.load_extension("cogs.shop")
+    await bot.load_extension("cogs.inventory")
+    await bot.load_extension("cogs.craft")
+    await bot.load_extension("cogs.love")
+    await bot.load_extension("cogs.gambling")
+    await bot.load_extension("cogs.quest")
+
+
 
 async def main():
     ensure_raphael_ready()
     async with bot:
         await setup_extensions()
         await bot.start(TOKEN)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
