@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 
 print("📍 ai_chat.py imported")
 
-
 from utils.love_db import change_user_love, get_user_love
 from utils.text_cleaner import extract_item_name, extract_city_name
 
@@ -25,25 +24,41 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 BAD_WORDS = ["시발", "씨발", "병신", "ㅅㅂ", "fuck"]
 GOOD_WORDS = ["고마워", "사랑해", "좋아해", "예쁘네", "귀여워"]
 
-DAILY_LIMIT = int(os.getenv("DAILY_LIMIT", "200"))
+# .env 없으면 기본 50
+DAILY_LIMIT = int(os.getenv("DAILY_LIMIT", "50"))
 USAGE_PATH = Path("data") / "ai_chat_usage.json"
 
-LAST_CHAT_TIME = {}
-IS_WAITING = set()
+LAST_CHAT_TIME: dict[int, tuple[int, float]] = {}
+IS_WAITING: set[int] = set()
 
 
 def _load_usage():
     USAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    today = datetime.now().strftime("%Y-%m-%d")
+
     if not USAGE_PATH.exists():
-        return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
+        data = {"date": today, "count": 0}
+        _save_usage(data)
+        return data
+
     try:
-        return json.loads(USAGE_PATH.read_text("utf-8"))
-    except Exception:
-        return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
+        data = json.loads(USAGE_PATH.read_text("utf-8"))
+        # 최소한의 유효성 체크
+        if "date" not in data or "count" not in data:
+            raise ValueError("invalid usage json")
+        return data
+    except Exception as e:
+        print("⚠️ ai_chat_usage.json 오류, 초기화:", e)
+        data = {"date": today, "count": 0}
+        _save_usage(data)
+        return data
 
 
 def _save_usage(data: dict):
-    USAGE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), "utf-8")
+    USAGE_PATH.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        "utf-8",
+    )
 
 
 def can_use_ai() -> bool:
@@ -99,7 +114,8 @@ def call_deepseek_reply(user_name: str, content: str, love: int, tone: str) -> s
         )
         data = r.json()
         return data["choices"][0]["message"]["content"].strip()
-    except:
+    except Exception as e:
+        print("⚠️ DeepSeek 호출 실패:", e)
         return "잠깐 멍해졌어. 다시 말해."
 
 
@@ -136,7 +152,8 @@ async def call_deepseek_proactive(love: int) -> str:
         )
         data = r.json()
         return data["choices"][0]["message"]["content"].strip()
-    except:
+    except Exception as e:
+        print("⚠️ DeepSeek proactive 실패:", e)
         fallback = [
             "뭐야, 갑자기 잠수?",
             "말 안 하면… 나 심심한데.",
@@ -223,13 +240,12 @@ class AIChatCog(commands.Cog):
 
         try:
             await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
+            print("✅ reply sent")
         except Exception as e:
             print("❌ Failed to send reply:", type(e).__name__, str(e))
 
-
         LAST_CHAT_TIME[msg.author.id] = (msg.channel.id, datetime.utcnow().timestamp())
         self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
-
 
 
 async def setup(bot):
