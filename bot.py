@@ -85,11 +85,10 @@ async def on_message(message: discord.Message):
 
     # AIChatCog listener가 처리하게 그냥 넘김 👇
     await bot.process_commands(message)
-    await bot.dispatch("message", message)
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
-    await bot.load_extension("cogs.market")
+    # await bot.load_extension("cogs.market")
     await bot.load_extension("cogs.ai_chat")
     await bot.load_extension("cogs.crafting")
     await bot.load_extension("cogs.economy")
