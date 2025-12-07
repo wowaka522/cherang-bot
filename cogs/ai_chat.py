@@ -189,15 +189,15 @@ class AIChatCog(commands.Cog):
             return
 
         lowered = msg.content.lower()
+        content = msg.content.strip()
 
         if any(w in lowered for w in ["시세", "얼마", "가격", "날씨", "기상", "어때"]):
             return
 
-        # 키워드 조건
-        TRIGGERS = ["체랑", "체랑봇", "체랑냥", "냥이",]
+        TRIGGERS = ["체랑", "체랑봇", "체랑냥", "냥이"]
         if not any(w in lowered for w in TRIGGERS):
             return
-            
+
         uid = str(msg.author.id)
 
         delta = 0
@@ -219,12 +219,13 @@ class AIChatCog(commands.Cog):
             reply = "오늘은 여기까지. 내일 다시 불러."
         else:
             inc_usage()
-            reply = call_deepseek_reply(msg.author.display_name, msg.content, love, tone)
+            reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
 
         await msg.reply(f"{mention_prefix}{reply}", mention_author=False)
 
         LAST_CHAT_TIME[msg.author.id] = (msg.channel.id, datetime.utcnow().timestamp())
         self.bot.loop.create_task(self._maybe_start_chat(msg.channel, msg.author, love))
+
 
 
 async def setup(bot):
