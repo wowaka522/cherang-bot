@@ -16,7 +16,7 @@ class TTSCog(commands.Cog):
     # ================== Slash Command ==================
     @app_commands.command(name="tts", description="TTS 재생 채널을 설정합니다.")
     @app_commands.describe(channel="TTS가 재생될 텍스트 채널")
-    async def set_tts_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+    async def set_tts_channel(self, interaction: discord.Interaction, channel: discord.abc.GuildChannel):
         self.tts_channel_id = channel.id
         await interaction.response.send_message(f"TTS 채널 설정 완료! → {channel.mention}")
 
