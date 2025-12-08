@@ -78,24 +78,22 @@ async def on_message(message: discord.Message):
 
     lowered = message.content.lower()
 
-    # 명령어 먼저 처리
-    await bot.process_commands(message)
-
-    # 자연어 처리
+    # ======= 자연어 처리 =======
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
-            return await market.search_and_reply(message)
+            await market.search_and_reply(message)
+        return
 
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
-            return await weather.reply_weather_from_message(message)
+            await weather.reply_weather_from_message(message)
         return
 
-
-    # AIChatCog listener가 처리하게 그냥 넘김 👇
+    # ======= 명령어 마지막에! =======
     await bot.process_commands(message)
+
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
