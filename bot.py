@@ -76,24 +76,26 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
+    # ========= [1] 명령어는 최우선 =========
+    if message.content.startswith(bot.command_prefix):
+        await bot.process_commands(message)
+        return
+
     lowered = message.content.lower()
 
-    # ======= 자연어 처리 =======
+    # ========= [2] 자연어 처리 =========
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
-            await market.search_and_reply(message)
-        return
+            return await market.search_and_reply(message)
 
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
-            await weather.reply_weather_from_message(message)
-        return
+            return await weather.reply_weather_from_message(message)
 
-    # ======= 명령어 마지막에! =======
+    # ========= [3] 나머지 메시지 =========
     await bot.process_commands(message)
-
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
