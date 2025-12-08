@@ -113,6 +113,11 @@ class TTSCog(commands.Cog):
             vc.play(discord.FFmpegPCMAudio(buf, pipe=True))
         except Exception as e:
             print("❌ playback:", e)
+            
+    @set_tts_channel.error
+    async def set_tts_error(self, interaction, error):
+        print("❌ Slash command error:", error)
+
 
 
 async def setup(bot):

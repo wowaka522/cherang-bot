@@ -32,20 +32,14 @@ bot = commands.Bot(
 
 @bot.event
 async def on_ready():
-    await bot.wait_until_ready()
-
-    guild_id = os.getenv("GUILD_ID")
-    if guild_id:
-        guild = discord.Object(id=int(guild_id))
-        synced = await bot.tree.sync(guild=guild)
-        print(f"Guild Slash Sync: {len(synced)}개")
-    else:
+    try:
         synced = await bot.tree.sync()
-        print(f"Global Slash Sync: {len(synced)}개")
+        print(f"🌐 Slash Commands Synced: {len(synced)}")
+    except Exception as e:
+        print("Slash Sync Error:", e)
 
     print("📌 Loaded COGs:", list(bot.cogs.keys()))
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
-    bot.loop.create_task(status_task())
 
 
 # 상태 메세지 #
