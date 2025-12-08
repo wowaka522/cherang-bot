@@ -1,16 +1,26 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from pathlib import Path
 from utils.google_tts import google_tts
+import io
+import soundfile as sf
 
 class TTSCog(commands.Cog):
     """Google TTS Only"""
 
     def __init__(self, bot):
         self.bot = bot
-        self.tts_channel_id = None  # 따로 저장 필요하면 config 사용
+        self.tts_channel_id = None  # 따로 저장 필요하면 DB 사용
 
-    # ================== TEXT COMMAND 버전 ==================
+    # ================== Slash Command ==================
+    @app_commands.command(name="tts", description="TTS 재생 채널을 설정합니다.")
+    @app_commands.describe(channel="TTS가 재생될 텍스트 채널")
+    async def set_tts_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+        self.tts_channel_id = channel.id
+        await interaction.response.send_message(f"TTS 채널 설정 완료! → {channel.mention}")
+
+    # ================== TEXT COMMAND ==================
 
     @commands.command(name="입장")
     async def join(self, ctx):
@@ -18,7 +28,6 @@ class TTSCog(commands.Cog):
             return await ctx.send("음성채널 먼저 들어가~")
 
         ch = ctx.author.voice.channel
-
         if ctx.voice_client:
             await ctx.voice_client.move_to(ch)
         else:
@@ -30,11 +39,6 @@ class TTSCog(commands.Cog):
         if vc:
             await vc.disconnect()
 
-    @commands.command(name="tts채널")
-    async def set_tts_channel(self, ctx, channel: discord.TextChannel):
-        self.tts_channel_id = channel.id
-        await ctx.send(f"TTS 채널 설정! → {channel.mention}")
-
     # ================== TEXT 감지 후 재생 ==================
 
     @commands.Cog.listener()
@@ -42,7 +46,6 @@ class TTSCog(commands.Cog):
         if message.author.bot:
             return
 
-        # 설정된 채널 체크
         if self.tts_channel_id is None:
             return
         if message.channel.id != self.tts_channel_id:
@@ -53,19 +56,12 @@ class TTSCog(commands.Cog):
             return
 
         text = message.content.strip()
-        if not text:
-            return
-
-        # 명령어는 읽지 않음
-        if text.startswith("!"):
+        if not text or text.startswith("!"):
             return
 
         try:
-            # 메모리에 직접 TTS 생성 (파일 없음!)
-            audio_data = google_tts(text)  # numpy array + sr 반환 전제
+            audio_data = google_tts(text)
 
-            import io
-            import soundfile as sf
             buffer = io.BytesIO()
             sf.write(buffer, audio_data, 24000, format='WAV')
             buffer.seek(0)
