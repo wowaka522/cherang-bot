@@ -53,6 +53,10 @@ class TTSCog(commands.Cog):
 
         vc = message.guild.voice_client
         if not vc:
+            if message.author.voice:
+                await message.author.voice.channel.connect()
+                vc = message.guild.voice_client
+        else:
             return
 
         text = message.content.strip()
