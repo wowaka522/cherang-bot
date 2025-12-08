@@ -73,28 +73,24 @@ async def status_task():
 
 @bot.event
 async def on_message(message: discord.Message):
-    print("🌐 Main on_message fired")
-
     if message.author.bot:
         return
 
-    # 🔥 명령어 먼저 통과 → 절대 막지 않음
-    await bot.process_commands(message)
-
     lowered = message.content.lower()
 
-    # 자연어 시세 처리
+    # 명령어 먼저 처리
+    await bot.process_commands(message)
+
+    # 자연어 처리
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
-            await market.search_and_reply(message)
-        return
+            return await market.search_and_reply(message)
 
-    # 자연어 날씨 처리
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
-            await weather.reply_weather_from_message(message)
+            return await weather.reply_weather_from_message(message)
         return
 
 
