@@ -1,0 +1,22 @@
+############################################
+# SSH Key 덮힘 해결
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+############################################
+# 디코봇 강제 최신 업데이트
+cd ~/cherang-bot
+git fetch --all
+git reset --hard origin/main
+git clean -fd
+pip3 install -r requirements.txt
+pm2 restart cherang --update-env
+
+############################################
+# 기본 진단
+pm2 ls
+pm2 logs cherang --lines 30
+git status
+############################################

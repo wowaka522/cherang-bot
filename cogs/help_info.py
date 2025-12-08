@@ -15,6 +15,7 @@ class HelpCog(commands.Cog):
             color=0x7BD8FF
         )
 
+        # 💬 자연어 예시
         embed.add_field(
             name="💬 자연어 예시",
             value=(
@@ -25,18 +26,21 @@ class HelpCog(commands.Cog):
             inline=False
         )
 
+        # 📦 거래 관련
         embed.add_field(
             name="📦 거래 관련",
             value="`/시세 <아이템>` - 거래소 시세 조회",
             inline=False
         )
 
+        # 🌤 날씨
         embed.add_field(
             name="🌤 날씨",
             value="`/날씨 <지역>` - 지역 기상 확인",
             inline=False
         )
 
+        # ⚙ 제작 시스템
         embed.add_field(
             name="⚙ 제작 시스템",
             value=(
@@ -46,6 +50,7 @@ class HelpCog(commands.Cog):
             inline=False
         )
 
+        # 💰 게임 콘텐츠
         embed.add_field(
             name="💰 게임 콘텐츠",
             value=(
@@ -57,15 +62,29 @@ class HelpCog(commands.Cog):
             inline=False
         )
 
+        # ❤️ 호감도
         embed.add_field(
             name="❤️ 호감도 / 대화",
             value="`/호감도` - 체랑과의 관계 확인 및 말걸기",
             inline=False
         )
 
+        # 🎯 퀘스트
         embed.add_field(
             name="🎯 퀘스트 & 업적",
             value="`/퀘스트` - 일일퀘스트 및 업적 확인",
+            inline=False
+        )
+
+        # 🔊 TTS 추가 (✨여기에 추가된 부분✨)
+        embed.add_field(
+            name="🔊 음성 채팅 (TTS)",
+            value=(
+                "`!입장` - 봇을 음성채널로 불러오기\n"
+                "`!퇴장` - 음성채널에서 내보내기\n"
+                "`/tts채널 <채널>` - 읽어줄 텍스트 채널 설정\n\n"
+                "📌 설정된 채널에서 메시지 → 자동으로 읽어줌!"
+            ),
             inline=False
         )
 
