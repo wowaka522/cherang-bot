@@ -62,6 +62,7 @@ class TTSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cfg = load_config()
+        self.view = VoiceView() 
 
         # Persistent UI 등록
         self.bot.add_view(VoiceView(self.cfg))
