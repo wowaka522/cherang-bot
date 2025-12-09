@@ -1,38 +1,102 @@
+import subprocess
 import uuid
+import os
 from pathlib import Path
+from google.cloud import texttospeech
 import requests
+import re
 
-VOICE_PATH = Path("voice")
-TEMP_PATH = VOICE_PATH / "temp"
+TEMP_PATH = Path("voice/temp")
 TEMP_PATH.mkdir(parents=True, exist_ok=True)
 
-# 한국어 음성
-VOICE_NAME = "SunHiNeural"  # 여성
-# VOICE_NAME = "BongJinNeural"  # 남성 (원하면 변경)
+client = texttospeech.TextToSpeechClient()
+audio_config = texttospeech.AudioConfig(
+    audio_encoding=texttospeech.AudioEncoding.LINEAR16
+)
 
-TTS_URL = f"https://speech.platform.bing.com/synthesize?speaker={VOICE_NAME}&lang=ko-KR"
+TTS_URL_TEMPLATE = "https://speech.platform.bing.com/synthesize?speaker={voice}&lang=ko-KR"
+
+# ────────────────────
+# 텍스트 전처리 (욕설/URL)
+# ────────────────────
+_initial_swears = {
+    "ㅅㅂ": "씨발",
+    "ㅂㅅ": "병신",
+    "ㅈㄴ": "존나",
+    "ㅈ같": "좆같",
+    "ㄱㅅㄲ": "개새끼",
+    "ㄴㅇㅁ": "느금마",
+    "ㅁㅊ": "미친"
+}
+
+def preprocess(text):
+    url_pattern = r"(https?://\S+|discord\.gg/\S+|www\.\S+)"
+    if re.search(url_pattern, text, re.IGNORECASE):
+        return "주소가 포함된 메시지 입니다."
+
+    for k, v in _initial_swears.items():
+        text = text.replace(k, v)
+
+    return text
 
 
-def normalize_text(text: str) -> str:
-    return text.strip()[:200]
+# ────────────────────
+# Google TTS Engine
+# ────────────────────
+def google_tts(text: str, voice_name: str):
+    tmp_id = uuid.uuid4().hex
+    wav_path = f"/tmp/{tmp_id}.wav"
+    ogg_path = f"/tmp/{tmp_id}.ogg"
+
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="ko-KR",
+        name=voice_name,
+    )
+
+    synth_input = texttospeech.SynthesisInput(text=text)
+    res = client.synthesize_speech(
+        input=synth_input,
+        voice=voice,
+        audio_config=audio_config
+    )
+
+    with open(wav_path, "wb") as f:
+        f.write(res.audio_content)
+
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", wav_path,
+        "-acodec", "libopus",
+        ogg_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    os.remove(wav_path)
+    return ogg_path
 
 
-async def synth_to_file(text: str) -> Path:
-    filename = f"{uuid.uuid4().hex}.wav"
-    out = TEMP_PATH / filename
+# ────────────────────
+# Bing TTS Engine
+# ────────────────────
+def bing_tts(text: str, voice_name: str):
+    tmp_id = uuid.uuid4().hex
+    wav_path = TEMP_PATH / f"{tmp_id}.wav"
+    ogg_path = TEMP_PATH / f"{tmp_id}.ogg"
+    
+    url = TTS_URL_TEMPLATE.format(voice=voice_name)
 
-    print(f"[TTS] 생성 시도 → {filename}")
-
-    try:
-        res = requests.post(TTS_URL, data=text.encode("utf-8"))
-        if res.status_code == 200 and res.content:
-            out.write_bytes(res.content)
-            print(f"[TTS 완료] {out}")
-            return out
-
-        print(f"[TTS ERROR] status={res.status_code}, size={len(res.content)}")
+    res = requests.post(url, data=text.encode("utf-8"))
+    if res.status_code != 200 or not res.content:
+        print("[TTS] Bing Error", res.status_code)
         return None
 
-    except Exception as e:
-        print("[TTS ERROR]", e)
-        return None
+    wav_path.write_bytes(res.content)
+
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", str(wav_path),
+        "-acodec", "libopus",
+        str(ogg_path)
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    os.remove(wav_path)
+    return str(ogg_path)
