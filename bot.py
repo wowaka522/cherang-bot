@@ -69,33 +69,36 @@ async def status_task():
 
 @bot.event
 async def on_message(message: discord.Message):
-    print("🌐 Main on_message fired")
-
     if message.author.bot:
         return
 
-    # 🔥 명령어 먼저 통과 → 절대 막지 않음
-    await bot.process_commands(message)
+    allowed_channels = [
+        1444493289846997236,  # 자연어 반응 허용 채널
+    ]
 
     lowered = message.content.lower()
 
-    # 자연어 시세 처리
-    if any(w in lowered for w in ["시세", "얼마", "가격"]):
-        market = bot.get_cog("MarketCog")
-        if market:
-            await market.search_and_reply(message)
-        return
+    # ⭕ 자연어 처리 (허용 채널에서만)
+    if message.channel.id in allowed_channels:
 
-    # 자연어 날씨 처리
-    if any(w in lowered for w in ["날씨", "기상", "어때"]):
-        weather = bot.get_cog("WeatherCog")
-        if weather:
-            await weather.reply_weather_from_message(message)
-        return
+        # 시세
+        if any(w in lowered for w in ["시세", "얼마", "가격"]):
+            cog = bot.get_cog("MarketCog")
+            if cog:
+                await cog.search_and_reply(message)
+            return
 
+        # 날씨
+        if any(w in lowered for w in ["날씨", "기상", "어때"]):
+            cog = bot.get_cog("WeatherCog")
+            if cog:
+                await cog.reply_weather_from_message(message)
+            return
 
-    # AIChatCog listener가 처리하게 그냥 넘김 👇
+    # ⭕ 명령어 처리는 한 번만!
     await bot.process_commands(message)
+
+
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
