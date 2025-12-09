@@ -16,9 +16,6 @@ audio_config = texttospeech.AudioConfig(
 
 TTS_URL_TEMPLATE = "https://speech.platform.bing.com/synthesize?speaker={voice}&lang=ko-KR"
 
-# ────────────────────
-# 텍스트 전처리 (욕설/URL)
-# ────────────────────
 _initial_swears = {
     "ㅅㅂ": "씨발",
     "ㅂㅅ": "병신",
@@ -40,9 +37,6 @@ def preprocess(text):
     return text
 
 
-# ────────────────────
-# Google TTS Engine
-# ────────────────────
 def google_tts(text: str, voice_name: str):
     tmp_id = uuid.uuid4().hex
     wav_path = f"/tmp/{tmp_id}.wav"
@@ -74,9 +68,6 @@ def google_tts(text: str, voice_name: str):
     return ogg_path
 
 
-# ────────────────────
-# Bing TTS Engine
-# ────────────────────
 def bing_tts(text: str, voice_name: str):
     tmp_id = uuid.uuid4().hex
     wav_path = TEMP_PATH / f"{tmp_id}.wav"
