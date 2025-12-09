@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from utils.azure_tts import azure_tts
+from utils.google_tts import google_tts
 import soundfile as sf
 
 CONFIG_PATH = Path("data") / "tts_config.json"
