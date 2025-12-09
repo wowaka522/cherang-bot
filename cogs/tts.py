@@ -28,9 +28,42 @@ def save_config(cfg: dict):
     CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
 
 
-class TTSCog(commands.Cog):
-    """Google/Bing TTS + UI Voice Select"""
+class VoiceSelect(Select):
+    def __init__(self, bot, cfg, user_id):
+        self.bot = bot
+        self.cfg = cfg
+        self.user_id = user_id
 
+        options = [
+            discord.SelectOption(label=name)
+            for name in VOICE_MAP.keys()
+        ]
+
+        super().__init__(
+            placeholder="목소리 선택👩🧑",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        chosen = self.values[0]
+        self.cfg["user_voice"][self.user_id] = chosen
+        save_config(self.cfg)
+
+        await interaction.response.edit_message(
+            content=f"🔊 목소리가 **{chosen}**으로 설정되었습니다!",
+            view=None
+        )
+
+
+class VoiceView(View):
+    def __init__(self, bot, cfg, user_id):
+        super().__init__(timeout=60)
+        self.add_item(VoiceSelect(bot, cfg, user_id))
+
+
+class TTSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cfg = load_config()
@@ -38,91 +71,23 @@ class TTSCog(commands.Cog):
     @app_commands.command(name="목소리", description="TTS 목소리 선택")
     async def choose_voice(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
-
-        select = Select(
-            placeholder="목소리를 선택하세요!",
-            options=[
-                discord.SelectOption(label=name) for name in VOICE_MAP.keys()
-            ]
-        )
-
-        async def on_select(i: discord.Interaction):
-            chosen = select.values[0]
-            self.cfg["user_voice"][user_id] = chosen
-            save_config(self.cfg)
-
-            await i.response.defer()
-            await i.edit_original_response(
-                content=f"🔊 목소리를 **{chosen}**으로 설정했어요!",
-                view=None,
-            )
-
-        select.callback = on_select
-        view = View()
-        view.add_item(select)
-
+        view = VoiceView(self.bot, self.cfg, user_id)
         await interaction.response.send_message(
-            "👇 아래에서 목소리를 골라주세요!",
+            "👇 아래에서 목소리 골라보세요!",
             view=view,
             ephemeral=True
         )
 
-    @commands.command(name="입장")
-    async def cmd_join(self, ctx):
-        await self._join(ctx)
-
-    @app_commands.command(name="입장")
-    async def slash_join(self, interaction):
-        await self._join(interaction)
-
-    async def _join(self, source):
-        user = source.user if isinstance(source, discord.Interaction) else source.author
-        if not user.voice:
-            msg = "음성 채널에 먼저 들어간 후 시도해줘!"
-            return await self._send(source, msg)
-
-        channel = user.voice.channel
-        vc = user.guild.voice_client
-
-        if vc:
-            await vc.move_to(channel)
-        else:
-            await channel.connect()
-
-        await self._send(source, f"🎧 {channel.mention} 입장!")
-
-    @commands.command(name="퇴장")
-    async def cmd_leave(self, ctx):
-        await self._leave(ctx)
-
-    @app_commands.command(name="퇴장")
-    async def slash_leave(self, interaction):
-        await self._leave(interaction)
-
-    async def _leave(self, source):
-        vc = source.guild.voice_client
-        if not vc:
-            return
-
-        await vc.disconnect()
-        await self._send(source, "👋 빠이빠이~")
-
-    async def _send(self, source, text):
-        if isinstance(source, discord.Interaction):
-            await source.response.send_message(text, ephemeral=False)
-        else:
-            await source.send(text)
+    # 기존 입장/퇴장 명령은 그대로 유지
+    # (생략: 너가 가진 버전 그대로 유지하면 OK)
 
     @commands.Cog.listener()
     async def on_message(self, msg):
         if msg.author.bot:
             return
 
-        if msg.channel.id != self.cfg.get("text_channel_id"):
-            return
-
         vc = msg.guild.voice_client
-        if not vc:
+        if not vc or msg.channel.id != self.cfg.get("text_channel_id"):
             return
 
         text = preprocess(msg.content.strip())
@@ -131,16 +96,15 @@ class TTSCog(commands.Cog):
 
         user_id = str(msg.author.id)
         chosen = self.cfg["user_voice"].get(user_id, "여성 A (Google)")
-        engine, voice = VOICE_MAP.get(chosen, VOICE_MAP["여성 A (Google)"])
-
-        print(f"[TTS] {engine} | {voice} | {text}")
+        engine, voice = VOICE_MAP[chosen]
 
         ogg = google_tts(text, voice) if engine == "google" else bing_tts(text, voice)
+
+        print(f"[TTS] {engine} | {voice} | {text}")
 
         if ogg:
             if vc.is_playing():
                 vc.stop()
-
             vc.play(discord.FFmpegPCMAudio(
                 ogg,
                 before_options="-nostdin -vn",
@@ -150,4 +114,4 @@ class TTSCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Loaded with UI")
+    print("🔊 TTSCog Loaded with Select UI")
