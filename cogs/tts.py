@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.google_tts import google_tts
+from utils.tts_engine import preprocess
 import os
 
 
@@ -88,6 +89,9 @@ class TTSCog(commands.Cog):
         text = msg.content.strip()
         if not text or text.startswith("!"):
             return
+        
+        text = preprocess(text)
+        print("[TTS - Cleaned]", text)
 
         print("[TTS]", text)
 

@@ -29,7 +29,7 @@ _initial_swears = {
 def preprocess(text):
     url_pattern = r"(https?://\S+|discord\.gg/\S+|www\.\S+)"
     if re.search(url_pattern, text, re.IGNORECASE):
-        return "주소가 포함된 메시지 입니다."
+        return "링크가 도착했어요."
 
     for k, v in _initial_swears.items():
         text = text.replace(k, v)
