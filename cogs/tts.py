@@ -134,6 +134,10 @@ class TTSCog(commands.Cog):
         chosen = self.cfg["user_voice"].get(uid, "여성 A")
 
         print(f"[TTS] {chosen} | '{text[:30]}'")
+        print("[TTS DEBUG] Handler reached!")
+        ogg_path = google_tts(text)
+        print("[TTS DEBUG] Returned path:", ogg_path, "Exists?", os.path.exists(ogg_path))
+
 
         try:
             ogg_path = google_tts(text)
