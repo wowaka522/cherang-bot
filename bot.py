@@ -52,6 +52,14 @@ async def on_ready():
     print("🤖 봇 준비 완료!")
 
 
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    # 디버그 로깅
+    if interaction.type.name == "component":
+        print(f"[DBG] Interaction Component Received: {interaction.data}")
+
+
+
 
 
 # ============================= #
