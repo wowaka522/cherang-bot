@@ -74,9 +74,6 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
-    # 🔥 명령어 먼저 통과 → 절대 막지 않음
-    await bot.process_commands(message)
-
     lowered = message.content.lower()
 
     # 자연어 시세 처리
@@ -93,9 +90,9 @@ async def on_message(message: discord.Message):
             await weather.reply_weather_from_message(message)
         return
 
-
-    # AIChatCog listener가 처리하게 그냥 넘김 👇
+    # 🔥 마지막에 딱 한 번만!
     await bot.process_commands(message)
+
 
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
