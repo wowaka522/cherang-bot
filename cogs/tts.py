@@ -73,13 +73,15 @@ class TTSCog(commands.Cog):
         # 봇 부팅 때 persistent UI 등록
         bot.add_view(VoiceView(self.cfg))
 
-    @app_commands.command(name="목소리", description="TTS 목소리 선택")
+    @ app_commands.command(name="목소리", description="TTS 목소리 선택")
     async def voice_cmd(self, interaction):
+        view = VoiceView(self.cfg)
         await interaction.response.send_message(
             "👇 아래에서 목소리를 선택해 주세요!",
-            view=VoiceView(self.cfg),
-            ephemeral=True
+            view=view,
+            ephemeral=False  # 🔥 변경
         )
+
 
     @commands.Cog.listener()
     async def on_message(self, msg):
