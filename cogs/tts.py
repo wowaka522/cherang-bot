@@ -77,11 +77,13 @@ class TTSCog(commands.Cog):
 
     @app_commands.command(name="목소리", description="TTS 목소리 선택")
     async def voice_cmd(self, interaction: discord.Interaction):
-        await interaction.followup.send(
+        await interaction.response.send_message(
             "👇 아래에서 목소리를 선택해 주세요!",
-            view=VoiceView(),
+            view=self.view,
             ephemeral=True
         )
+        print("[DBG] voice_cmd executed")
+
 
     @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
     async def set_tts_channel(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
