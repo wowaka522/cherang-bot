@@ -35,20 +35,17 @@ from cogs.tts import VoiceView  # 👈 추가
 # ============================= #
 @bot.event
 async def on_ready():
-    try:
-        print("⏳ Syncing commands...")
-        await bot.tree.sync()  # 👈 이제 여기에서만 실행
-        print("🌐 Slash Commands Synced!")
-    except Exception as e:
-        print("Slash Sync Error:", e)
-
+    print("🟡 Waiting Cogs ready...")
+    await setup_extensions()  # 여기서 먼저 Cog 로드
+    await bot.tree.sync()
+    
     tts = bot.get_cog("TTSCog")
     if tts:
-        bot.add_view(tts.view)
-        print("🔗 Persistent View Registered")
+        bot.add_view(tts.view)   # Persistent View 등록 (Cog 로드 후!)
+        print("🔗 TTS View Registered")
 
-    print("📌 Loaded COGs:", list(bot.cogs.keys()))
-    print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
+    print("🤖 봇 준비 완료!")
+
 
 
 
