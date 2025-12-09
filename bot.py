@@ -21,6 +21,10 @@ intents.members = True
 intents.guilds = True
 intents.guild_messages = True
 intents.voice_states = True
+intents.integrations = True
+intents.webhooks = True
+intents.presences = True
+intents.reactions = True
 
 bot = commands.Bot(
     command_prefix="!",
