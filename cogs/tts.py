@@ -46,7 +46,7 @@ class VoiceSelect(discord.ui.Select):
 
         print(f"[TTS] Voice Selected: {chosen}")
 
-        await interaction.response.send_message(
+        await interaction.followup.send(  # 🔥 여기가 핵심!!
             f"🔈 **{chosen}** 으로 설정 완료!",
             ephemeral=True
         )
