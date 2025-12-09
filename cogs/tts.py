@@ -63,19 +63,20 @@ class TTSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cfg = load_config()
+
+        # Persistent View: 오직 1개
         self.view = VoiceView(self.cfg)
+        self.bot.add_view(self.view)  # 👈 이것만 등록!
 
-        # Persistent UI 등록
-        self.bot.add_view(VoiceView(self.cfg))
 
-    # 목소리 선택 UI
     @app_commands.command(name="목소리", description="TTS 목소리 변경")
-    async def voice_cmd(self, interaction):
+    async def voice_cmd(self, interaction: discord.Interaction):
         await interaction.response.send_message(
             "👇 아래에서 목소리를 선택하세요!",
-            view=VoiceView(self.cfg),
+            view=self.view,  # 👈 오직 하나의 View만 사용
             ephemeral=True
         )
+
 
     # 채널 지정
     @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
