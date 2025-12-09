@@ -35,7 +35,8 @@ class VoiceSelect(Select):
             placeholder="🔊 목소리를 선택하세요!",
             min_values=1,
             max_values=1,
-            options=[discord.SelectOption(label=k) for k in VOICE_MAP.keys()]
+            options=[discord.SelectOption(label=k) for k in VOICE_MAP.keys()],
+            custom_id="voice_select_menu"
         )
 
     async def callback(self, interaction: discord.Interaction):
