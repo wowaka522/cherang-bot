@@ -16,12 +16,10 @@ VOICE_MAP = {
     "남성 D (Bing)": ("bing", "BongJinNeural"),
 }
 
-
 def load_config():
     if CONFIG_PATH.exists():
         return json.loads(CONFIG_PATH.read_text("utf-8"))
     return {"text_channel_id": None, "user_voice": {}}
-
 
 def save_config(cfg: dict):
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -34,16 +32,11 @@ class VoiceSelect(Select):
         self.cfg = cfg
         self.user_id = user_id
 
-        options = [
-            discord.SelectOption(label=name)
-            for name in VOICE_MAP.keys()
-        ]
-
         super().__init__(
-            placeholder="목소리 선택👩🧑",
+            placeholder="목소리를 선택하세요!",
             min_values=1,
             max_values=1,
-            options=options
+            options=[discord.SelectOption(label=n) for n in VOICE_MAP.keys()]
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -69,16 +62,63 @@ class TTSCog(commands.Cog):
         self.cfg = load_config()
 
     @app_commands.command(name="목소리", description="TTS 목소리 선택")
-    async def choose_voice(self, interaction: discord.Interaction):
+    async def voice_cmd(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
         user_id = str(interaction.user.id)
         view = VoiceView(self.bot, self.cfg, user_id)
-        await interaction.response.send_message(
-            "👇 아래에서 목소리 골라보세요!",
-            view=view,
+
+        await interaction.edit_original_response(
+            content="👇 아래에서 목소리를 골라주세요!",
+            view=view
         )
 
-    # 기존 입장/퇴장 명령은 그대로 유지
-    # (생략: 너가 가진 버전 그대로 유지하면 OK)
+    @commands.command(name="입장")
+    async def cmd_join(self, ctx):
+        await self._join(ctx)
+
+    @app_commands.command(name="입장")
+    async def slash_join(self, interaction):
+        await self._join(interaction)
+
+    async def _join(self, source):
+        user = source.user if isinstance(source, discord.Interaction) else source.author
+        if not user.voice:
+            return await self._reply(source, "먼저 음성 채널 들어가!")
+
+        channel = user.voice.channel
+        vc = user.guild.voice_client
+
+        if vc:
+            await vc.move_to(channel)
+        else:
+            await channel.connect()
+
+        await self._reply(source, f"🎧 {channel.mention} 입장!")
+
+    @commands.command(name="퇴장")
+    async def cmd_leave(self, ctx):
+        await self._leave(ctx)
+
+    @app_commands.command(name="퇴장")
+    async def slash_leave(self, interaction):
+        await self._leave(interaction)
+
+    async def _leave(self, source):
+        vc = source.guild.voice_client
+        if not vc:
+            return
+        await vc.disconnect()
+        await self._reply(source, "👋 빠이빠이~")
+
+    async def _reply(self, source, msg):
+        if isinstance(source, discord.Interaction):
+            try:
+                await source.response.send_message(msg)
+            except:
+                await source.followup.send(msg)
+        else:
+            await source.send(msg)
 
     @commands.Cog.listener()
     async def on_message(self, msg):
@@ -89,17 +129,15 @@ class TTSCog(commands.Cog):
         if not vc or msg.channel.id != self.cfg.get("text_channel_id"):
             return
 
-        text = preprocess(msg.content.strip())
-        if not text:
+        text = preprocess(msg.content)
+        if not text or text.startswith("!"):
             return
 
         user_id = str(msg.author.id)
         chosen = self.cfg["user_voice"].get(user_id, "여성 A (Google)")
-        engine, voice = VOICE_MAP[chosen]
+        engine, voice_name = VOICE_MAP.get(chosen, VOICE_MAP["여성 A (Google)"])
 
-        ogg = google_tts(text, voice) if engine == "google" else bing_tts(text, voice)
-
-        print(f"[TTS] {engine} | {voice} | {text}")
+        ogg = google_tts(text, voice_name) if engine == "google" else bing_tts(text, voice_name)
 
         if ogg:
             if vc.is_playing():
@@ -113,4 +151,4 @@ class TTSCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Loaded with Select UI")
+    print("🔊 TTSCog Loaded - FINAL SAFE VERSION")
