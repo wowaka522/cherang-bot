@@ -1,14 +1,12 @@
 import json
-import tempfile
 from pathlib import Path
-import soundfile as sf
 import discord
 from discord.ext import commands
 from discord import app_commands
-
 from utils.google_tts import google_tts
+from pathlib import Path
 
-CONFIG_PATH = Path("data") / "tts_config.json"
+CONFIG_PATH = Path("data/tts_config.json")
 
 
 def load_config():
@@ -32,7 +30,7 @@ class VoiceSelect(discord.ui.Select):
     def __init__(self, cfg):
         self.cfg = cfg
         super().__init__(
-            custom_id="voice_select_v3",
+            custom_id="voice_select_v4",
             placeholder="🔊 목소리를 선택하세요!",
             min_values=1,
             max_values=1,
@@ -44,6 +42,7 @@ class VoiceSelect(discord.ui.Select):
 
         chosen = self.values[0]
         uid = str(interaction.user.id)
+
         self.cfg["user_voice"][uid] = chosen
         save_config(self.cfg)
 
@@ -66,10 +65,10 @@ class TTSCog(commands.Cog):
         self.bot = bot
         self.cfg = load_config()
 
-        # Only one persistent view
         self.view = VoiceView(self.cfg)
         self.bot.add_view(self.view)
 
+    # Slash: 목소리 선택 UI
     @app_commands.command(name="목소리", description="TTS 목소리 변경")
     async def voice_cmd(self, interaction: discord.Interaction):
         await interaction.response.send_message(
@@ -78,8 +77,10 @@ class TTSCog(commands.Cog):
             ephemeral=True
         )
 
-    @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
+    # Slash: 채널 지정
+    @app_commands.command(name="채널지정", description="TTS 텍스트 채널 지정")
     async def set_tts_channel(self, interaction, channel: discord.TextChannel=None):
+
         if not interaction.user.guild_permissions.administrator:
             return await interaction.response.send_message("관리자만 가능!", ephemeral=True)
 
@@ -90,24 +91,28 @@ class TTSCog(commands.Cog):
         save_config(self.cfg)
 
         await interaction.response.send_message(
-            f"📌 이제 TTS 채널이 **{channel.mention}** 로 설정됐어요!"
+            f"📌 이제 TTS는 {channel.mention} 에서만 작동해요!"
         )
 
+    # Prefix: 입장
     @commands.command(name="입장")
     async def join_voice(self, ctx):
         if not ctx.author.voice:
-            return await ctx.reply("음성 채널 먼저 들어가!")
+            return await ctx.reply("먼저 음성 채널 들어가!")
+
         ch = ctx.author.voice.channel
         if ctx.voice_client:
             await ctx.voice_client.move_to(ch)
         else:
             await ch.connect()
 
+    # Prefix: 퇴장
     @commands.command(name="퇴장")
     async def leave_voice(self, ctx):
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
 
+    # Listener: 메시지 음성 변환
     @commands.Cog.listener()
     async def on_message(self, msg):
         if msg.author.bot:
@@ -127,32 +132,22 @@ class TTSCog(commands.Cog):
 
         uid = str(msg.author.id)
         chosen = self.cfg["user_voice"].get(uid, "여성 A")
-        voice = VOICE_MAP[chosen]
 
-        print(f"[TTS] {chosen} | text='{text[:30]}'")
+        print(f"[TTS] {chosen} | '{text[:30]}'")
 
         try:
-            audio_np, sample_rate = google_tts(text, voice)
-            print("google_tts return:", audio_np, sample_rate)
-
-            if audio_np is None:
-                print("❌ google_tts returned None")
-                return
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                sf.write(tmp.name, audio_np, sample_rate, format="WAV")
-                wav_path = tmp.name
+            ogg_path = google_tts(text)
 
             if vc.is_playing():
                 vc.stop()
 
             vc.play(discord.FFmpegPCMAudio(
-                wav_path,
-                before_options="-nostdin -vn",
+                ogg_path,
+                before_options="-nostdin",
                 options="-ac 2 -ar 48000"
             ))
 
-            print(f"[TTS] Playing → {wav_path}")
+            print(f"[TTS] Playing → {ogg_path}")
 
         except Exception as e:
             print("❌ playback:", e)
@@ -160,4 +155,4 @@ class TTSCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Ready (Voice Stable)")
+    print("🔊 TTSCog Loaded & Persistent Ready")
