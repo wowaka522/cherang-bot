@@ -110,6 +110,7 @@ class TTSCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, msg):
+        print("google_tts return:", audio_np, sample_rate)
         if msg.author.bot:
             return
 
