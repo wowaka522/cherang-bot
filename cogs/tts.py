@@ -29,8 +29,12 @@ def save_config(cfg: dict):
     CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
 
 
+# ======================
+# Persistent UI 방식
+# ======================
 class VoiceSelect(Select):
-    def __init__(self):
+    def __init__(self, cfg):
+        self.cfg = cfg
         super().__init__(
             placeholder="🔊 목소리를 선택하세요!",
             min_values=1,
@@ -39,34 +43,42 @@ class VoiceSelect(Select):
             custom_id="voice_select_menu"
         )
 
-    async def callback(self, interaction: discord.Interaction):
-        cfg = interaction.client.get_cog("TTSCog").cfg
+    async def callback(self, inter: discord.Interaction):
         chosen = self.values[0]
-        cfg["user_voice"][str(interaction.user.id)] = chosen
-        save_config(cfg)
+        self.cfg["user_voice"][str(inter.user.id)] = chosen
+        save_config(self.cfg)
 
         print(f"[TTS] Voice Selected: {chosen}")
 
-        await interaction.response.send_message(
-            f"목소리가 **{chosen}** 으로 설정되었어요!",
-            ephemeral=False
+        await inter.response.edit_message(
+            content=f"목소리가 **{chosen}** 으로 설정되었습니다!",
+            view=None
         )
 
 
+class VoiceView(View):
+    def __init__(self, cfg):
+        super().__init__(timeout=None)  # <-- persistent 핵심
+        self.add_item(VoiceSelect(cfg))
+
+
+# ======================
+#   Cog
+# ======================
 class TTSCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cfg = load_config()
 
+        # 봇 부팅 때 persistent UI 등록
+        bot.add_view(VoiceView(self.cfg))
+
     @app_commands.command(name="목소리", description="TTS 목소리 선택")
     async def voice_cmd(self, interaction):
-        view = View()
-        view.add_item(VoiceSelect())
-
         await interaction.response.send_message(
             "👇 아래에서 목소리를 선택해 주세요!",
-            view=view,
-            ephemeral=False
+            view=VoiceView(self.cfg),
+            ephemeral=True
         )
 
     @commands.Cog.listener()
@@ -104,4 +116,4 @@ class TTSCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Loaded (Stable UI Version)")
+    print("🔊 TTSCog Loaded (Persistent UI Fixed)")
