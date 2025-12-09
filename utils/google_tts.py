@@ -29,12 +29,11 @@ def google_tts(text: str) -> str:
     with open(wav_path, "wb") as f:
         f.write(response.audio_content)
 
+    # ffmpeg: wav → opus (Discord 호환)
     subprocess.run([
         "ffmpeg", "-y",
         "-i", wav_path,
-        "-ac", "2",
-        "-ar", "48000",
-        "-f", "opus",
+        "-acodec", "libopus",
         ogg_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
