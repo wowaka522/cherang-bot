@@ -17,14 +17,17 @@ CONFIG_PATH = Path("data") / "tts_config.json"
 VOICE_MAP = {
     "여성 A (Google)": "ko-KR-Neural2-A",
     "남성 B (Google)": "ko-KR-Neural2-B",
-    "여성 C (Bing)": "SunHiNeural",  # 나중 확장 대비
+    "여성 C (Bing)": "SunHiNeural",
     "남성 D (Bing)": "BongJinNeural"
 }
 
 
 def load_config():
-    if CONFIG_PATH.exists():
-        return json.loads(CONFIG_PATH.read_text("utf-8"))
+    try:
+        if CONFIG_PATH.exists():
+            return json.loads(CONFIG_PATH.read_text("utf-8"))
+    except:
+        pass
     return {"text_channel_id": None, "user_voice": {}}
 
 
@@ -75,8 +78,10 @@ class TTSCog(commands.Cog):
 
     # ------- /목소리 ------- #
     @app_commands.command(name="목소리", description="TTS 목소리 선택")
-    async def voice_cmd(self, interaction):
-        await interaction.response.send_message(
+    async def voice_cmd(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        await interaction.followup.send(
             "👇 아래에서 목소리를 선택해 주세요!",
             view=VoiceView(),
             ephemeral=True
@@ -84,7 +89,7 @@ class TTSCog(commands.Cog):
 
     # ------- /채널지정 ------- #
     @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
-    async def set_tts_channel(self, interaction, channel: discord.TextChannel = None):
+    async def set_tts_channel(self, interaction: discord.Interaction, channel: discord.TextChannel = None):
 
         if not interaction.user.guild_permissions.administrator:
             return await interaction.response.send_message("관리자만 가능!", ephemeral=True)
@@ -130,9 +135,12 @@ class TTSCog(commands.Cog):
     #  메시지 → 음성 변환 처리
     # ============================================================ #
     @commands.Cog.listener()
-    async def on_message(self, msg):
+    async def on_message(self, msg: discord.Message):
         if msg.author.bot:
             return
+
+        # 🎯 Slash Command & prefix 명령어 정상화
+        await self.bot.process_commands(msg)
 
         ch_id = self.cfg.get("text_channel_id")
         if not ch_id or msg.channel.id != ch_id:
@@ -140,17 +148,18 @@ class TTSCog(commands.Cog):
 
         vc = msg.guild.voice_client
         if not vc:
+            print("[TTS] No Voice Client")
             return
 
-        text = msg.content.strip()
+        text = msg.content
         if not text or text.startswith("!"):
             return
+
+        print(f"[DBG] on_message triggered: {text[:30]}")
 
         user_id = str(msg.author.id)
         chosen = self.cfg["user_voice"].get(user_id, "여성 A (Google)")
         voice = VOICE_MAP[chosen]
-
-        print(f"[TTS] {chosen} | text='{text[:30]}'...")
 
         try:
             # numpy array + sample rate 반환
@@ -160,7 +169,6 @@ class TTSCog(commands.Cog):
                 print("❌ google_tts returned None")
                 return
 
-            # --- WAV 임시파일 생성 후 재생 --- #
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
                 sf.write(tmp.name, audio_np, sample_rate, format="wav")
                 path = tmp.name
@@ -182,4 +190,4 @@ class TTSCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Loaded (Final Stable)")
+    print("🔊 TTSCog Loaded (Patched)")
