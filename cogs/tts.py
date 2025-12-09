@@ -75,7 +75,6 @@ class TTSCog(commands.Cog):
         await interaction.response.send_message(
             "👇 아래에서 목소리 골라보세요!",
             view=view,
-            ephemeral=True
         )
 
     # 기존 입장/퇴장 명령은 그대로 유지
