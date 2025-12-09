@@ -1,16 +1,18 @@
+
 import os
 import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from pathlib import Path
-import random
-from discord import Activity, ActivityType
-
-# ======================= #
-#   .env Load
-# ======================= #
 load_dotenv()
+
+from utils.raphael import ensure_raphael_ready
+
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# .env 파일을 bot.py가 있는 폴더에서 강제 로드
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -19,14 +21,8 @@ if not TOKEN:
     raise RuntimeError("❌ .env에 DISCORD_TOKEN 없음")
 
 
-# ======================= #
-#   Intents
-# ======================= #
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
-intents.guilds = True
-intents.voice_states = True
 
 bot = commands.Bot(
     command_prefix="!",
@@ -34,10 +30,25 @@ bot = commands.Bot(
     application_id=int(os.getenv("APPLICATION_ID"))
 )
 
+@bot.event
+async def on_ready():
+    await bot.wait_until_ready()
+    try:
+        synced = await bot.tree.sync()
+        print(f"Slash 명령어 싱크 완료: {len(synced)}개")
+    except Exception as e:
+        print("Slash Sync Error:", e)
 
-# ======================= #
-#        상태 메시지
-# ======================= #
+    print("📌 Loaded COGs:", list(bot.cogs.keys()))
+    print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
+    bot.loop.create_task(status_task())
+
+
+# 상태 메세지 #
+import random
+import asyncio
+from discord import Activity, ActivityType
+
 async def status_task():
     await bot.wait_until_ready()
     statuses = [
@@ -51,71 +62,44 @@ async def status_task():
     while not bot.is_closed():
         activity = Activity(type=ActivityType.watching, name=random.choice(statuses))
         await bot.change_presence(activity=activity)
-        await asyncio.sleep(3600)
+        await asyncio.sleep(3600)  # 1시간 (초 단위)
 
 
-# ======================= #
-#           Ready
-# ======================= #
-@bot.event
-async def on_ready():
-    try:
-        synced = await bot.tree.sync()
-        print(f"🌐 Slash Commands Synced: {len(synced)}")
-    except Exception as e:
-        print("Slash Sync Error:", e)
-
-    print("🤖 봇 준비 완료!")
 
 
-@bot.event
-async def on_interaction(interaction: discord.Interaction):
-    if interaction.type.name == "component":
-        print(f"[DBG] Interaction Component Received: {interaction.data}")
-
-
-# ======================= #
-#    자연어 + TTS + prefix
-# ======================= #
 @bot.event
 async def on_message(message: discord.Message):
-    # 디버그
-    # print("🌐 Main on_message fired")  # 필요시 활성화
+    print("🌐 Main on_message fired")
 
     if message.author.bot:
         return
 
+    # 🔥 명령어 먼저 통과 → 절대 막지 않음
+    await bot.process_commands(message)
+
     lowered = message.content.lower()
 
-    # 1) 자연어 처리
+    # 자연어 시세 처리
     if any(w in lowered for w in ["시세", "얼마", "가격"]):
         market = bot.get_cog("MarketCog")
         if market:
             await market.search_and_reply(message)
         return
 
+    # 자연어 날씨 처리
     if any(w in lowered for w in ["날씨", "기상", "어때"]):
         weather = bot.get_cog("WeatherCog")
         if weather:
             await weather.reply_weather_from_message(message)
         return
 
-    # 2) prefix 명령어 처리
-    if message.content.startswith(bot.command_prefix):
-        await bot.process_commands(message)
 
-    # 3) TTS listener 호출
-    tts = bot.get_cog("TTSCog")
-    if tts:
-        await tts.on_message(message)
+    # AIChatCog listener가 처리하게 그냥 넘김 👇
+    await bot.process_commands(message)
 
-
-# ======================= #
-#       Load Extensions
-# ======================= #
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
-    await bot.load_extension("cogs.market")
+    #await bot.load_extension("cogs.market")
     await bot.load_extension("cogs.ai_chat")
     await bot.load_extension("cogs.crafting")
     await bot.load_extension("cogs.economy")
@@ -130,14 +114,12 @@ async def setup_extensions():
     await bot.load_extension("cogs.tts")
 
 
-# ======================= #
-#        실행
-# ======================= #
-async def main():
-    await setup_extensions()
-    asyncio.create_task(status_task())
 
+
+async def main():
+    ensure_raphael_ready()
     async with bot:
+        await setup_extensions()
         await bot.start(TOKEN)
 
 
