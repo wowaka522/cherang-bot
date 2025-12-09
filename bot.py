@@ -21,10 +21,6 @@ intents.members = True
 intents.guilds = True
 intents.guild_messages = True
 intents.voice_states = True
-intents.integrations = True
-intents.webhooks = True
-intents.presences = True
-intents.reactions = True
 
 bot = commands.Bot(
     command_prefix="!",
@@ -32,39 +28,30 @@ bot = commands.Bot(
     application_id=int(os.getenv("APPLICATION_ID"))
 )
 
-from cogs.tts import VoiceView  # 👈 추가
 
-
-# ============================= #
-#        봇 로그인 처리
-# ============================= #
 @bot.event
 async def on_ready():
-    print("🟡 Waiting Cogs ready...")
-    await setup_extensions()  # 여기서 먼저 Cog 로드
-    await bot.tree.sync()
-    
+    # Persistent View 등록만 함!!
     tts = bot.get_cog("TTSCog")
     if tts:
-        bot.add_view(tts.view)   # Persistent View 등록 (Cog 로드 후!)
+        bot.add_view(tts.view)
         print("🔗 TTS View Registered")
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"🌐 Slash Commands Synced: {len(synced)}")
+    except Exception as e:
+        print("Slash Sync Error:", e)
 
     print("🤖 봇 준비 완료!")
 
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
-    # 디버그 로깅
     if interaction.type.name == "component":
         print(f"[DBG] Interaction Component Received: {interaction.data}")
 
 
-
-
-
-# ============================= #
-#         상태 메시지
-# ============================= #
 import random
 from discord import Activity, ActivityType
 
@@ -84,35 +71,6 @@ async def status_task():
         await asyncio.sleep(3600)
 
 
-@bot.event
-async def on_message(message: discord.Message):
-    if message.author.bot:
-        return
-
-    # prefix 명령어 최우선
-    if message.content.startswith(bot.command_prefix):
-        await bot.process_commands(message)
-        return
-
-    lowered = message.content.lower()
-
-    # 자연어 처리
-    if "시세" in lowered or "얼마" in lowered or "가격" in lowered:
-        market = bot.get_cog("MarketCog")
-        if market:
-            return await market.search_and_reply(message)
-
-    if "날씨" in lowered or "기상" in lowered or "어때" in lowered:
-        weather = bot.get_cog("WeatherCog")
-        if weather:
-            return await weather.reply_weather_from_message(message)
-
-    await bot.process_commands(message)
-
-
-# ============================= #
-#        Cog Load
-# ============================= #
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
     await bot.load_extension("cogs.market")
@@ -131,9 +89,9 @@ async def setup_extensions():
 
 
 async def main():
-    asyncio.create_task(status_task())  # 상태메시지 유지
+    asyncio.create_task(status_task())
     async with bot:
-        await setup_extensions()
+        await setup_extensions()  # 여기서만!!
         await bot.start(TOKEN)
 
 
