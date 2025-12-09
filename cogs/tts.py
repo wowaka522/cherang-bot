@@ -38,15 +38,16 @@ class VoiceSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)  # 첫 응답 ACK
+
         chosen = self.values[0]
         uid = str(interaction.user.id)
-
         self.cfg["user_voice"][uid] = chosen
         save_config(self.cfg)
 
         print(f"[TTS] Voice Selected: {chosen}")
 
-        await interaction.followup.send(  # 🔥 여기가 핵심!!
+        await interaction.followup.send(
             f"🔈 **{chosen}** 으로 설정 완료!",
             ephemeral=True
         )
