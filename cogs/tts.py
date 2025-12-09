@@ -1,82 +1,110 @@
+import json
+from pathlib import Path
 import discord
 from discord.ext import commands
-from pathlib import Path
+from discord import app_commands
+
 from utils.google_tts import google_tts
+
+CONFIG_PATH = Path("data") / "tts_config.json"
+
+
+def load_config():
+    if CONFIG_PATH.exists():
+        return json.loads(CONFIG_PATH.read_text("utf-8"))
+    return {"text_channel_id": None}
+
+
+def save_config(cfg: dict):
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
+
 
 class TTSCog(commands.Cog):
     """Google TTS Only"""
 
     def __init__(self, bot):
         self.bot = bot
-        self.tts_channel_id = None  # 따로 저장 필요하면 config 사용
+        self.cfg = load_config()
 
-    # ================== TEXT COMMAND 버전 ==================
+    @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
+    @app_commands.describe(channel="비우면 현재 채널 지정")
+    async def set_tts_channel(self, interaction, channel: discord.TextChannel = None):
+
+        if not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message("관리자만 가능!", ephemeral=True)
+
+        if channel is None:
+            if isinstance(interaction.channel, discord.TextChannel):
+                channel = interaction.channel
+            else:
+                return await interaction.response.send_message(
+                    "텍스트 채널에서 실행하거나 지정해!", ephemeral=True
+                )
+
+        self.cfg["text_channel_id"] = channel.id
+        save_config(self.cfg)
+
+        await interaction.response.send_message(
+            f"TTS 채널: {channel.mention} 지정 완료!"
+        )
 
     @commands.command(name="입장")
-    async def join(self, ctx):
+    async def join_voice(self, ctx):
         if not ctx.author.voice:
-            return await ctx.send("음성채널 먼저 들어가~")
+            return await ctx.reply("먼저 음성 채널 들어가!")
 
-        ch = ctx.author.voice.channel
+        channel = ctx.author.voice.channel
+        vc = ctx.voice_client
 
-        if ctx.voice_client:
-            await ctx.voice_client.move_to(ch)
-        else:
-            await ch.connect()
+        try:
+            if vc:
+                await vc.move_to(channel)
+            else:
+                await channel.connect()
+            print(f"[TTS] Connected: {channel.name}")
+        except Exception as e:
+            print("❌ join failed:", e)
 
     @commands.command(name="퇴장")
-    async def leave(self, ctx):
-        vc = ctx.voice_client
-        if vc:
-            await vc.disconnect()
-
-    @commands.command(name="tts채널")
-    async def set_tts_channel(self, ctx, channel: discord.TextChannel):
-        self.tts_channel_id = channel.id
-        await ctx.send(f"TTS 채널 설정! → {channel.mention}")
-
-    # ================== TEXT 감지 후 재생 ==================
+    async def leave_voice(self, ctx):
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        if message.author.bot:
+    async def on_message(self, msg):
+        if msg.author.bot:
             return
 
-        # 설정된 채널 체크
-        if self.tts_channel_id is None:
-            return
-        if message.channel.id != self.tts_channel_id:
+        ch_id = self.cfg.get("text_channel_id")
+        if not ch_id or msg.channel.id != ch_id:
             return
 
-        vc = message.guild.voice_client
+        vc = msg.guild.voice_client
         if not vc:
             return
 
-        text = message.content.strip()
-        if not text:
+        text = msg.content.strip()
+        if not text or text.startswith("!"):
             return
 
-        # 명령어는 읽지 않음
-        if text.startswith("!"):
-            return
+        print("[TTS]", text)
 
         try:
-            # 메모리에 직접 TTS 생성 (파일 없음!)
-            audio_data = google_tts(text)  # numpy array + sr 반환 전제
-
-            import io
-            import soundfile as sf
-            buffer = io.BytesIO()
-            sf.write(buffer, audio_data, 24000, format='WAV')
-            buffer.seek(0)
+            ogg_path = google_tts(text)
 
             if vc.is_playing():
                 vc.stop()
 
-            vc.play(discord.FFmpegPCMAudio(buffer, pipe=True))
+            vc.play(discord.FFmpegPCMAudio(
+                ogg_path,
+                before_options="-nostdin -vn",
+                options="-ac 2 -ar 48000"
+            ))
 
         except Exception as e:
-            print("[TTS ERROR]", e)
+            print("❌ playback:", e)
+
 
 async def setup(bot):
     await bot.add_cog(TTSCog(bot))
