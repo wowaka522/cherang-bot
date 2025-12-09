@@ -3,8 +3,9 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 from discord import app_commands
-
 from utils.google_tts import google_tts
+import os
+
 
 CONFIG_PATH = Path("data") / "tts_config.json"
 
@@ -104,6 +105,26 @@ class TTSCog(commands.Cog):
 
         except Exception as e:
             print("❌ playback:", e)
+
+    # ===================================================== #
+    #   자동 퇴장 기능
+    # ===================================================== #
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        vc = member.guild.voice_client
+        if not vc:
+            return
+
+        # 봇이 속한 음성 채널이 없으면 패스
+        if not vc.channel:
+            return
+
+        # 봇이 있는 채널에 남은 유저 수 확인
+        humans = [m for m in vc.channel.members if not m.bot]
+
+        if len(humans) == 0:
+            print("👋 아무도 없음 → 자동 퇴장")
+            await vc.disconnect()
 
 
 async def setup(bot):
