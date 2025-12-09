@@ -1,18 +1,13 @@
-
 import os
 import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from pathlib import Path
+
 load_dotenv()
 
-from utils.raphael import ensure_raphael_ready
-
-from pathlib import Path
-from dotenv import load_dotenv
-import os
-
-# .env 파일을 bot.py가 있는 폴더에서 강제 로드
+# .env 파일 강제 로드
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -20,9 +15,11 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
     raise RuntimeError("❌ .env에 DISCORD_TOKEN 없음")
 
-
 intents = discord.Intents.default()
 intents.message_content = True
+intents.guilds = True
+intents.guild_messages = True
+intents.voice_states = True
 
 bot = commands.Bot(
     command_prefix="!",
@@ -30,6 +27,12 @@ bot = commands.Bot(
     application_id=int(os.getenv("APPLICATION_ID"))
 )
 
+from cogs.tts import VoiceView  # 👈 추가
+
+
+# ============================= #
+#        봇 로그인 처리
+# ============================= #
 @bot.event
 async def on_ready():
     try:
@@ -38,13 +41,18 @@ async def on_ready():
     except Exception as e:
         print("Slash Sync Error:", e)
 
+    # 👇 persistent view 등록 (가장 중요!)
+    bot.add_view(VoiceView())
+    print("🔗 Persistent Views Registered")
+
     print("📌 Loaded COGs:", list(bot.cogs.keys()))
     print(f"🤖 로그인 완료: {bot.user} (ID: {bot.user.id})")
 
 
-# 상태 메세지 #
+# ============================= #
+#         상태 메시지
+# ============================= #
 import random
-import asyncio
 from discord import Activity, ActivityType
 
 async def status_task():
@@ -60,9 +68,7 @@ async def status_task():
     while not bot.is_closed():
         activity = Activity(type=ActivityType.watching, name=random.choice(statuses))
         await bot.change_presence(activity=activity)
-        await asyncio.sleep(3600)  # 1시간 (초 단위)
-
-
+        await asyncio.sleep(3600)
 
 
 @bot.event
@@ -70,27 +76,30 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
-    # ========= [1] 명령어는 최우선 =========
+    # prefix 명령어 최우선
     if message.content.startswith(bot.command_prefix):
         await bot.process_commands(message)
         return
 
     lowered = message.content.lower()
 
-    # ========= [2] 자연어 처리 =========
-    if any(w in lowered for w in ["시세", "얼마", "가격"]):
+    # 자연어 처리
+    if "시세" in lowered or "얼마" in lowered or "가격" in lowered:
         market = bot.get_cog("MarketCog")
         if market:
             return await market.search_and_reply(message)
 
-    if any(w in lowered for w in ["날씨", "기상", "어때"]):
+    if "날씨" in lowered or "기상" in lowered or "어때" in lowered:
         weather = bot.get_cog("WeatherCog")
         if weather:
             return await weather.reply_weather_from_message(message)
 
-    # ========= [3] 나머지 메시지 =========
     await bot.process_commands(message)
 
+
+# ============================= #
+#        Cog Load
+# ============================= #
 async def setup_extensions():
     await bot.load_extension("cogs.weather")
     await bot.load_extension("cogs.market")
@@ -108,10 +117,8 @@ async def setup_extensions():
     await bot.load_extension("cogs.tts")
 
 
-
-
 async def main():
-    ensure_raphael_ready()
+    asyncio.create_task(status_task())  # 상태메시지 유지
     async with bot:
         await setup_extensions()
         await bot.start(TOKEN)
