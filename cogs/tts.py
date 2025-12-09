@@ -44,6 +44,7 @@ class VoiceSelect(Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
         cfg = interaction.client.get_cog("TTSCog").cfg
         chosen = self.values[0]
 
@@ -52,7 +53,10 @@ class VoiceSelect(Select):
 
         print(f"[TTS] Voice Selected by {interaction.user}: {chosen}")
 
-        await interaction.response.send_message(f"목소리가 **{chosen}** 으로 설정되었어요!", ephemeral=True)
+        await interaction.followup.send(
+            f"목소리가 **{chosen}** 으로 설정되었어요!",
+            ephemeral=True
+        )
 
 
 class VoiceView(View):
