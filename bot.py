@@ -42,6 +42,8 @@ async def on_ready():
         print("Slash Sync Error:", e)
 
     # 👇 persistent view 등록 (가장 중요!)
+tts = bot.get_cog("TTSCog")
+if tts:
     bot.add_view(VoiceView())
     print("🔗 Persistent Views Registered")
 
