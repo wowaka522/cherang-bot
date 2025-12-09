@@ -89,10 +89,19 @@ async def setup_extensions():
 
 
 async def main():
+    await setup_extensions()  # 먼저 Cogs 로드
+
+    # 🔥 여기에서 TTSCog.view를 등록한다!!
+    tts = bot.get_cog("TTSCog")
+    if tts:
+        bot.add_view(tts.view)
+        print("🔗 TTS Persistent View Registered (Main)")
+
+    # Slash sync는 on_ready()에서 수행
     asyncio.create_task(status_task())
     async with bot:
-        await setup_extensions()  # 여기서만!!
         await bot.start(TOKEN)
+
 
 
 if __name__ == "__main__":
