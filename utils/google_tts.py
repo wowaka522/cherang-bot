@@ -1,17 +1,21 @@
-voice_name = "ko-KR-Neural2-B"
+from google.cloud import texttospeech
+
+client = texttospeech.TextToSpeechClient()
+
 audio_config = texttospeech.AudioConfig(
-    audio_encoding=texttospeech.AudioEncoding.LINEAR16,
-    speaking_rate=1.0
+    audio_encoding=texttospeech.AudioEncoding.LINEAR16
 )
 
-input_text = texttospeech.SynthesisInput(text=text)
-
-voice_params = texttospeech.VoiceSelectionParams(
+voice = texttospeech.VoiceSelectionParams(
     language_code="ko-KR",
-    name=voice_name
+    name="ko-KR-Neural2-A"  # 목소리 스타일
 )
 
-response = client.synthesize_speech(
-    request={"input": input_text, "voice": voice_params, "audio_config": audio_config}
-)
-audio_data, _ = sf.read(io.BytesIO(response.audio_content), dtype="int16")
+def google_tts(text):
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+    response = client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config
+    )
+    return response.audio_content
