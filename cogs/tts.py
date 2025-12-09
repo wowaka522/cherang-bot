@@ -30,11 +30,12 @@ class VoiceSelect(discord.ui.Select):
     def __init__(self, cfg):
         self.cfg = cfg
         super().__init__(
+            custom_id="voice_select",
             placeholder="🔊 목소리를 선택하세요!",
             min_values=1,
             max_values=1,
             options=[discord.SelectOption(label=v) for v in VOICE_MAP.keys()],
-            custom_id="voice_select"
+
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -44,7 +45,7 @@ class VoiceSelect(discord.ui.Select):
         self.cfg["user_voice"][uid] = chosen
         save_config(self.cfg)
 
-        print(f"[TTS] Voice set → {uid} = {chosen}")
+        print(f"[TTS] Voice Selected: {chosen}")
 
         await interaction.response.send_message(
             f"🔈 **{chosen}** 으로 설정 완료!",
@@ -63,6 +64,7 @@ class TTSCog(commands.Cog):
         self.bot = bot
         self.cfg = load_config()
         self.view = VoiceView() 
+        self.view = VoiceView(self.cfg)
 
         # Persistent UI 등록
         self.bot.add_view(VoiceView(self.cfg))
