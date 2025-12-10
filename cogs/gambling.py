@@ -1,7 +1,8 @@
-# cogs/gambling.py
-
 import random
 import asyncio
+import json
+from pathlib import Path
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -15,7 +16,7 @@ from utils.user_api import (
 # 공통 설정
 # ================================
 
-MIN_BET = 100          # 슬롯/바카라 최소 베팅
+MIN_BET = 100          # 슬롯/바카라/홀짝 최소 베팅
 BJ_MIN_BET = 1000      # 블랙잭 최소 베팅
 BJ_MAX_BET = 5000      # 블랙잭 최대 베팅
 
@@ -26,16 +27,105 @@ SLOT_TABLE = [
     ("red",    1447268797621731378, 40, "R", 1.3),
     ("yellow", 1447268817595007099, 40, "Y", 1.3),
     ("green",  1447268747613044767, 40, "G", 1.3),
-    ("blue",   1447189856152326194, 40, "B", 1.3),
+    ("blue",   1447268692793757890, 40, "B", 1.3),
     ("purple", 1447268773512876205, 40, "P", 1.3),
 ]
 
+# 도박 통계 기록용 JSON
+STATS_PATH = Path("data") / "gambling_stats.json"
+STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
 # ================================
-# 공통 쿨데레/악마 멘트
+# 도박 통계 유틸
+# ================================
+
+def _load_stats() -> dict:
+    if not STATS_PATH.exists():
+        return {}
+    try:
+        return json.loads(STATS_PATH.read_text("utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_stats(data: dict):
+    STATS_PATH.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+
+
+def record_gamble_result(user_id: int, bet: int, win: int):
+    """
+    도박 한 판 결과 기록
+    - bet: 판당 베팅 금액
+    - win: 돌아온 금액(0, 부분 환급, 2배 등)
+    연승 기준:
+    - (win - bet) > 0 이면 '승리'로 간주 → 연승 +1
+    - (win - bet) < 0 이면 패배 → 연승 0으로 초기화
+    - 0 이면(본전) → 연승 유지
+    """
+    if bet <= 0:
+        return
+
+    data = _load_stats()
+    key = str(user_id)
+    user_stat = data.get(key, {
+        "total_bet": 0,
+        "total_win": 0,
+        "current_streak": 0,
+        "best_streak": 0,
+    })
+
+    user_stat["total_bet"] += bet
+    user_stat["total_win"] += win
+
+    profit = win - bet
+    if profit > 0:
+        user_stat["current_streak"] += 1
+    elif profit < 0:
+        user_stat["current_streak"] = 0
+    # profit == 0 → 연승 유지
+
+    if user_stat["current_streak"] > user_stat["best_streak"]:
+        user_stat["best_streak"] = user_stat["current_streak"]
+
+    data[key] = user_stat
+    _save_stats(data)
+
+
+def get_profit_ranking(limit: int = 10):
+    stats = _load_stats()
+    ranking = []
+    for uid, st in stats.items():
+        total_bet = st.get("total_bet", 0)
+        total_win = st.get("total_win", 0)
+        net = total_win - total_bet
+        ranking.append((int(uid), net, total_bet, total_win, st.get("current_streak", 0), st.get("best_streak", 0)))
+    ranking.sort(key=lambda x: x[1], reverse=True)
+    return ranking[:limit]
+
+
+def get_streak_ranking(limit: int = 10):
+    stats = _load_stats()
+    ranking = []
+    for uid, st in stats.items():
+        cur = st.get("current_streak", 0)
+        best = st.get("best_streak", 0)
+        total_bet = st.get("total_bet", 0)
+        total_win = st.get("total_win", 0)
+        ranking.append((int(uid), cur, best, total_bet, total_win))
+    ranking.sort(key=lambda x: x[1], reverse=True)
+    return ranking[:limit]
+
+
+# ================================
+# 공통 쿨데레 멘트
 # ================================
 
 def get_cool_comment(win: int, bet: int) -> str:
-    """도박 결과에 따른 체랑 코멘트 (슬롯/바카라/블랙잭 공용)"""
+    """도박 결과에 따른 체랑 코멘트 (슬롯/바카라/블랙잭/홀짝 공용)"""
     # 냥체 5% 확률
     if random.random() < 0.05:
         return "…우으. 이번엔 망한 거다냥. 아, 아니야. 아무것도 아냐."
@@ -151,6 +241,9 @@ async def start_slot_spin(interaction: discord.Interaction, user_id: int, bet: i
     data["money"] = data.get("money", 0) + win
     update_user(user_id, data)
 
+    # 도박 통계 기록
+    record_gamble_result(user_id, bet, win)
+
     final_symbols = " ".join([x[0] for x in result])
     comment = get_cool_comment(win, bet)
 
@@ -173,6 +266,7 @@ async def start_slot_spin(interaction: discord.Interaction, user_id: int, bet: i
 # ================================
 
 RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
+
 
 def baccarat_card_value(rank: str) -> int:
     if rank == "A":
@@ -291,7 +385,6 @@ async def start_baccarat_game(interaction: discord.Interaction, user_id: int, be
         winner = "player"
     elif p_sum < b_sum:
         winner = "banker"
-        # dealer
     else:
         winner = "tie"
 
@@ -316,6 +409,9 @@ async def start_baccarat_game(interaction: discord.Interaction, user_id: int, be
     data = get_user(user_id)
     data["money"] = data.get("money", 0) + win
     update_user(user_id, data)
+
+    # 도박 통계 기록
+    record_gamble_result(user_id, bet, win)
 
     winner_text = {
         "player": "플레이어 승",
@@ -426,10 +522,8 @@ class BlackjackGameView(discord.ui.View):
     async def end_game(self, interaction: discord.Interaction, result_text: str, color=0x555555):
         if self.finished:
             return
-        
-        self.finished = True
-        # 버튼 제거!
 
+        self.finished = True
         embed = self.build_embed(reveal=True, extra=result_text, color=color)
         await self.safe_edit(interaction, embed, view=None)
 
@@ -463,9 +557,15 @@ class BlackjackGameView(discord.ui.View):
 
         data["money"] += win
         update_user(self.user_id, data)
+
+        # 도박 통계 기록
+        record_gamble_result(self.user_id, self.bet, win)
+
         comment = get_cool_comment(win, self.bet)
 
-        result = f"{msg}\n획득: **{win} 길**\n잔액: **{data['money']} 길**\n\n{comment}"
+        result = (
+            f"{msg}\n획득: **{win} 길**\n잔액: **{data['money']} 길**\n\n{comment}"
+        )
         await self.end_game(interaction, result, 0xFFD700 if win > 0 else 0x555555)
 
     # ===========================
@@ -482,6 +582,10 @@ class BlackjackGameView(discord.ui.View):
         if p > 21:  # 버스트
             data = get_user(self.user_id)
             comment = get_cool_comment(0, self.bet)
+
+            # 도박 통계 기록 (bet, 0)
+            record_gamble_result(self.user_id, self.bet, 0)
+
             return await self.end_game(
                 interaction,
                 f"버스트! 0 길.\n잔액: **{data['money']} 길**\n\n{comment}",
@@ -518,6 +622,10 @@ class BlackjackGameView(discord.ui.View):
         self.player_cards.append(bj_draw_card())
         if bj_hand_value(self.player_cards) > 21:  # 즉시 버스트
             comment = get_cool_comment(0, self.bet)
+
+            # 도박 통계 기록 (더블된 bet 기준)
+            record_gamble_result(self.user_id, self.bet, 0)
+
             return await self.end_game(
                 interaction,
                 f"더블치고 버스트ㅋㅋ\n획득: 0 길\n잔액: **{data['money']} 길**\n\n{comment}",
@@ -538,6 +646,9 @@ class BlackjackGameView(discord.ui.View):
         data["money"] += refund
         update_user(self.user_id, data)
         comment = get_cool_comment(refund, self.bet)
+
+        # 도박 통계 기록 (bet, refund)
+        record_gamble_result(self.user_id, self.bet, refund)
 
         await self.end_game(
             interaction,
@@ -600,7 +711,7 @@ class BlackjackBetView(discord.ui.View):
                 win = int(bet)
                 result_text = "둘 다 블랙잭이네. …재미없게 무승부야."
             elif player_bj:
-                # 플레이어 BJ: 1.5배
+                # 플레이어 BJ: 1.5배 이익 → 2.5배 지급
                 win = int(bet * 2.5)
                 result_text = "블랙잭. 오늘 운 다 썼네."
             else:
@@ -612,16 +723,19 @@ class BlackjackBetView(discord.ui.View):
             data["money"] = data.get("money", 0) + win
             update_user(self.user_id, data)
 
+            # 도박 통계 기록
+            record_gamble_result(self.user_id, bet, win)
+
             desc = (
                 f"플레이어: {bj_format_cards(player_cards)} (합계: **{p_sum}**)\n"
                 f"딜러: {bj_format_cards(dealer_cards)} (합계: **{d_sum}**)\n\n"
                 f"{result_text}\n\n"
                 f"베팅: **{bet} 길**\n"
                 f"획득: **{win} 길**\n"
-                f"현재 잔액: **{data['money']} 길**\n\n"
+                f"현재 잔액: **{data['money']} 길**\n"
             )
             comment = get_cool_comment(win, bet)
-            desc += comment
+            desc += f"\n{comment}"
 
             embed = discord.Embed(
                 title="🃏 블랙잭 - 결과",
@@ -650,80 +764,110 @@ class BlackjackBetView(discord.ui.View):
 
 
 # ================================
-# UI 뷰 (게임 선택 / 슬롯 / 바카라)
+# 홀짝 관련
 # ================================
 
-class GameSelectView(discord.ui.View):
+class OddEvenBetView(discord.ui.View):
     def __init__(self, user_id: int):
         super().__init__(timeout=60)
         self.user_id = user_id
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("이건 네 도박장이 아니야.", ephemeral=True)
+            await interaction.response.send_message("네 돈 아니잖아.", ephemeral=True)
             return False
         return True
 
-    @discord.ui.button(label="🎰 슬롯", style=discord.ButtonStyle.primary)
-    async def slot_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        uid = self.user_id
-        data = get_user(uid)
+    @discord.ui.select(
+        placeholder="베팅 금액 선택",
+        options=[
+            discord.SelectOption(label="100 길"),
+            discord.SelectOption(label="500 길"),
+            discord.SelectOption(label="1000 길"),
+        ]
+    )
+    async def select_bet(self, interaction: discord.Interaction, select: discord.ui.Select):
+        bet = int(select.values[0].split()[0])
+        data = get_user(self.user_id)
         money = data.get("money", 0)
+        if money < bet:
+            return await interaction.response.send_message("돈 없는데 뭘 걸어.", ephemeral=True)
 
         embed = discord.Embed(
-            title="🎰 슬롯 머신",
-            description=(
-                f"베팅 금액을 골라.\n"
-                f"현재 소지금: **{money} 길**\n\n"
-                f"최소 베팅: {MIN_BET} 길"
-            ),
-            color=0x55FFAA
+            title="⚫ 홀짝 - 선택",
+            description=f"베팅: **{bet} 길**\n홀 / 짝 중 하나 골라.",
+            color=0x7777FF
         )
-        embed.set_footer(text="…진짜 할 거야? 후회해도 몰라.")
-
-        view = SlotBetView(uid)
+        embed.set_footer(text="0 나오면 하우스 승. 알아서 감당해.")
+        view = OddEvenTypeView(self.user_id, bet)
         await interaction.response.edit_message(embed=embed, view=view)
 
-    @discord.ui.button(label="🎴 바카라", style=discord.ButtonStyle.danger)
-    async def baccarat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        uid = self.user_id
-        data = get_user(uid)
+
+class OddEvenTypeView(discord.ui.View):
+    def __init__(self, user_id: int, bet: int):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.bet = bet
+
+    async def _play(self, interaction: discord.Interaction, pick: str):
+        data = get_user(self.user_id)
         money = data.get("money", 0)
 
+        if money < self.bet:
+            return await interaction.response.send_message("돈 없잖아.", ephemeral=True)
+
+        # 돈 차감
+        data["money"] = money - self.bet
+        update_user(self.user_id, data)
+
+        number = random.randint(0, 9)
+        result = "odd" if number % 2 == 1 else "even"
+
+        win = 0
+        if number == 0:
+            result_text = "0 나왔어. 하우스 승."
+        else:
+            if result == pick:
+                win = self.bet * 2
+                result_text = f"정답! ({number})"
+            else:
+                result_text = f"꽝. ({number})"
+
+        data = get_user(self.user_id)
+        data["money"] += win
+        update_user(self.user_id, data)
+
+        # 도박 통계 기록
+        record_gamble_result(self.user_id, self.bet, win)
+
+        comment = get_cool_comment(win, self.bet)
+
         embed = discord.Embed(
-            title="🎴 바카라",
+            title="⚫ 홀짝 결과",
             description=(
-                f"베팅 금액부터 정해.\n"
-                f"현재 소지금: **{money} 길**\n\n"
-                f"최소 베팅: {MIN_BET} 길"
+                f"숫자: **{number}**\n"
+                f"{result_text}\n\n"
+                f"베팅: **{self.bet} 길**\n"
+                f"획득: **{win} 길**\n"
+                f"잔액: **{data['money']} 길**\n\n"
+                f"{comment}"
             ),
-            color=0xAA2233
+            color=0xFFD700 if win > 0 else 0x555555
         )
-        embed.set_footer(text="…규칙은 대충 알지?")
+        await interaction.response.edit_message(embed=embed, view=None)
 
-        view = BaccaratBetView(uid)
-        await interaction.response.edit_message(embed=embed, view=view)
+    @discord.ui.button(label="홀 (Odd)", style=discord.ButtonStyle.primary)
+    async def pick_odd(self, i: discord.Interaction, _):
+        await self._play(i, "odd")
 
-    @discord.ui.button(label="🃏 블랙잭", style=discord.ButtonStyle.success)
-    async def blackjack_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        uid = self.user_id
-        data = get_user(uid)
-        money = data.get("money", 0)
+    @discord.ui.button(label="짝 (Even)", style=discord.ButtonStyle.success)
+    async def pick_even(self, i: discord.Interaction, _):
+        await self._play(i, "even")
 
-        embed = discord.Embed(
-            title="🃏 블랙잭",
-            description=(
-                f"베팅 금액을 골라.\n"
-                f"현재 소지금: **{money} 길**\n\n"
-                f"베팅 범위: {BJ_MIN_BET} ~ {BJ_MAX_BET} 길"
-            ),
-            color=0x228833
-        )
-        embed.set_footer(text="…진짜 카지노 들어온 느낌이지?")
 
-        view = BlackjackBetView(uid)
-        await interaction.response.edit_message(embed=embed, view=view)
-
+# ================================
+# 배팅용 슬롯/바카라 뷰
+# ================================
 
 class SlotBetView(discord.ui.View):
     def __init__(self, user_id: int):
@@ -818,6 +962,183 @@ class BaccaratTypeView(discord.ui.View):
     @discord.ui.button(label="페어 (12배)", style=discord.ButtonStyle.danger)
     async def bet_pair(self, interaction: discord.Interaction, button: discord.ui.Button):
         await start_baccarat_game(interaction, self.user_id, self.bet, "pair")
+
+
+# ================================
+# 랭킹 뷰
+# ================================
+
+def build_profit_rank_embed() -> discord.Embed:
+    ranks = get_profit_ranking()
+    if not ranks:
+        desc = "아직 도박한 애가 없네. 깨끗하긴 하다."
+    else:
+        lines = []
+        for idx, (uid, net, total_bet, total_win, cur, best) in enumerate(ranks, start=1):
+            lines.append(
+                f"**{idx}위** — <@{uid}> : 이익 **{net} 길** "
+                f"(총획득 {total_win} / 총베팅 {total_bet}, 연승 {cur}, 최고 {best})"
+            )
+        desc = "\n".join(lines)
+
+    embed = discord.Embed(
+        title="🏆 도박 수익 랭킹",
+        description=desc,
+        color=0xFFD700
+    )
+    embed.set_footer(text="…돈 벌었다고 자랑하진 말고.")
+    return embed
+
+
+def build_streak_rank_embed() -> discord.Embed:
+    ranks = get_streak_ranking()
+    if not ranks:
+        desc = "연승 중인 사람이 없어. 다들 적당히 지는 중."
+    else:
+        lines = []
+        for idx, (uid, cur, best, total_bet, total_win) in enumerate(ranks, start=1):
+            lines.append(
+                f"**{idx}위** — <@{uid}> : 현재 **{cur} 연승** (최고 {best} 연승)"
+            )
+        desc = "\n".join(lines)
+
+    embed = discord.Embed(
+        title="🔥 도박 연승 랭킹",
+        description=desc,
+        color=0xFF5555
+    )
+    embed.set_footer(text="…언젠간 끊기겠지.")
+    return embed
+
+
+class GamblingRankView(discord.ui.View):
+    def __init__(self, user_id: int, mode: str):
+        super().__init__(timeout=30)
+        self.user_id = user_id
+        self.mode = mode  # "profit" or "streak"
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("네 순위 아니잖아.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="🔄 새로고침", style=discord.ButtonStyle.secondary)
+    async def refresh_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.mode == "profit":
+            embed = build_profit_rank_embed()
+        else:
+            embed = build_streak_rank_embed()
+
+        await interaction.response.edit_message(embed=embed, view=self)
+
+
+# ================================
+# 게임 선택 뷰
+# ================================
+
+class GameSelectView(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("이건 네 도박장이 아니야.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="🎰 슬롯", style=discord.ButtonStyle.primary, row=0)
+    async def slot_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        uid = self.user_id
+        data = get_user(uid)
+        money = data.get("money", 0)
+
+        embed = discord.Embed(
+            title="🎰 슬롯 머신",
+            description=(
+                f"베팅 금액을 골라.\n"
+                f"현재 소지금: **{money} 길**\n\n"
+                f"최소 베팅: {MIN_BET} 길"
+            ),
+            color=0x55FFAA
+        )
+        embed.set_footer(text="…진짜 할 거야? 후회해도 몰라.")
+
+        view = SlotBetView(uid)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    @discord.ui.button(label="🎴 바카라", style=discord.ButtonStyle.danger, row=0)
+    async def baccarat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        uid = self.user_id
+        data = get_user(uid)
+        money = data.get("money", 0)
+
+        embed = discord.Embed(
+            title="🎴 바카라",
+            description=(
+                f"베팅 금액부터 정해.\n"
+                f"현재 소지금: **{money} 길**\n\n"
+                f"최소 베팅: {MIN_BET} 길"
+            ),
+            color=0xAA2233
+        )
+        embed.set_footer(text="…규칙은 대충 알지?")
+
+        view = BaccaratBetView(uid)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    @discord.ui.button(label="🃏 블랙잭", style=discord.ButtonStyle.success, row=0)
+    async def blackjack_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        uid = self.user_id
+        data = get_user(uid)
+        money = data.get("money", 0)
+
+        embed = discord.Embed(
+            title="🃏 블랙잭",
+            description=(
+                f"베팅 금액을 골라.\n"
+                f"현재 소지금: **{money} 길**\n\n"
+                f"베팅 범위: {BJ_MIN_BET} ~ {BJ_MAX_BET} 길"
+            ),
+            color=0x228833
+        )
+        embed.set_footer(text="…진짜 카지노 들어온 느낌이지?")
+
+        view = BlackjackBetView(uid)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    @discord.ui.button(label="⚫ 홀짝", style=discord.ButtonStyle.secondary, row=1)
+    async def odd_even_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        uid = self.user_id
+        data = get_user(uid)
+        money = data.get("money", 0)
+
+        embed = discord.Embed(
+            title="⚫ 홀짝 게임",
+            description=(
+                f"홀 / 짝 중 하나를 골라.\n"
+                f"현재 소지금: **{money} 길**\n\n"
+                f"최소 베팅: {MIN_BET} 길"
+            ),
+            color=0x7777FF
+        )
+        embed.set_footer(text="…확률이 반반이라고 생각해? 착각이야.")
+
+        view = OddEvenBetView(uid)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    @discord.ui.button(label="🏆 수익 랭킹", style=discord.ButtonStyle.secondary, row=1)
+    async def profit_rank_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = build_profit_rank_embed()
+        view = GamblingRankView(self.user_id, mode="profit")
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    @discord.ui.button(label="🔥 연승 랭킹", style=discord.ButtonStyle.secondary, row=1)
+    async def streak_rank_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = build_streak_rank_embed()
+        view = GamblingRankView(self.user_id, mode="streak")
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 # ================================

@@ -1,136 +1,113 @@
-import json
-from pathlib import Path
+import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
+
 from utils.google_tts import google_tts
-from utils.tts_engine import preprocess
-import os
+from utils.tts_db import get_voice, set_voice
+
+tts_queue = asyncio.Queue()
+player_running = False
 
 
-CONFIG_PATH = Path("data") / "tts_config.json"
+async def play_audio(vc: discord.VoiceClient, path: str):
+    vc.play(discord.FFmpegPCMAudio(path))
+    while vc.is_playing():
+        await asyncio.sleep(0.1)
 
 
-def load_config():
-    if CONFIG_PATH.exists():
-        return json.loads(CONFIG_PATH.read_text("utf-8"))
-    return {"text_channel_id": None}
+async def player_loop(bot):
+    global player_running
+    if player_running:
+        return
+    player_running = True
 
-
-def save_config(cfg: dict):
-    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
-
-
-class TTSCog(commands.Cog):
-    """Google TTS Only"""
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.cfg = load_config()
-
-    @app_commands.command(name="채널지정", description="TTS 텍스트 채널 설정")
-    @app_commands.describe(channel="비우면 현재 채널 지정")
-    async def set_tts_channel(self, interaction, channel: discord.TextChannel = None):
-
-        if not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("관리자만 가능!", ephemeral=True)
-
-        if channel is None:
-            if isinstance(interaction.channel, discord.TextChannel):
-                channel = interaction.channel
-            else:
-                return await interaction.response.send_message(
-                    "텍스트 채널에서 실행하거나 지정해!", ephemeral=True
-                )
-
-        self.cfg["text_channel_id"] = channel.id
-        save_config(self.cfg)
-
-        await interaction.response.send_message(
-            f"TTS 채널: {channel.mention} 지정 완료!"
-        )
-
-    @commands.command(name="입장")
-    async def join_voice(self, ctx):
-        if not ctx.author.voice:
-            return await ctx.reply("먼저 음성 채널 들어가!")
-
-        channel = ctx.author.voice.channel
-        vc = ctx.voice_client
+    while True:
+        guild, audio = await tts_queue.get()
+        vc = guild.voice_client
+        if not vc or not vc.is_connected():
+            continue
 
         try:
-            if vc:
-                await vc.move_to(channel)
-            else:
-                await channel.connect()
-            print(f"[TTS] Connected: {channel.name}")
-        except Exception as e:
-            print("❌ join failed:", e)
+            await play_audio(vc, audio)
+        except:
+            pass
+
+
+class VoiceSelect(discord.ui.View):
+    async def _update(self, interaction, text):
+        await interaction.response.defer(ephemeral=True)
+        await interaction.edit_original_response(content=text, view=None)
+
+    @discord.ui.button(label="여성 A", style=discord.ButtonStyle.primary)
+    async def female_a(self, interaction, button):
+        set_voice(interaction.user.id, "female_a")
+        await self._update(interaction, "여성 A로 설정됨!")
+
+    @discord.ui.button(label="여성 B", style=discord.ButtonStyle.primary)
+    async def female_b(self, interaction, button):
+        set_voice(interaction.user.id, "female_b")
+        await self._update(interaction, "여성 B로 설정됨!")
+
+    @discord.ui.button(label="남성 A", style=discord.ButtonStyle.secondary)
+    async def male_a(self, interaction, button):
+        set_voice(interaction.user.id, "male_a")
+        await self._update(interaction, "남성 A로 설정됨!")
+
+    @discord.ui.button(label="남성 B", style=discord.ButtonStyle.secondary)
+    async def male_b(self, interaction, button):
+        set_voice(interaction.user.id, "male_b")
+        await self._update(interaction, "남성 B로 설정됨!")
+
+
+
+class TTS(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.channel_id = None
+
+        bot.loop.create_task(player_loop(bot))
+
+    @app_commands.command(name="목소리", description="TTS 목소리를 변경합니다")
+    async def voice(self, interaction):
+        await interaction.response.send_message(
+            "원하는 목소리를 선택하세요 😺",
+            view=VoiceSelect(),
+            ephemeral=True
+        )
+
+    @app_commands.command(name="채널지정", description="TTS를 사용할 채널을 설정합니다")
+    async def set_channel(self, interaction):
+        self.channel_id = interaction.channel.id
+        await interaction.response.send_message("이 채널에서 TTS를 사용할게요!", ephemeral=True)
+
+    @commands.command(name="입장")
+    async def join(self, ctx):
+        if ctx.author.voice:
+            await ctx.author.voice.channel.connect()
 
     @commands.command(name="퇴장")
-    async def leave_voice(self, ctx):
+    async def leave(self, ctx):
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
 
+    async def enqueue(self, message: discord.Message):
+        voice = get_voice(message.author.id)
+        audio_path = google_tts(message.content, voice)
+
+        await tts_queue.put((message.guild, audio_path))
+
     @commands.Cog.listener()
-    async def on_message(self, msg):
-        if msg.author.bot:
+    async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+        if self.channel_id != message.channel.id:
+            return
+        if not message.guild.voice_client:
             return
 
-        ch_id = self.cfg.get("text_channel_id")
-        if not ch_id or msg.channel.id != ch_id:
-            return
-
-        vc = msg.guild.voice_client
-        if not vc:
-            return
-
-        text = msg.content.strip()
-        if not text or text.startswith("!"):
-            return
-        
-        text = preprocess(text)
-        print("[TTS - Cleaned]", text)
-
-        print("[TTS]", text)
-
-        try:
-            ogg_path = google_tts(text)
-
-            if vc.is_playing():
-                vc.stop()
-
-            vc.play(discord.FFmpegPCMAudio(
-                ogg_path,
-                before_options="-nostdin -vn",
-                options="-ac 2 -ar 48000"
-            ))
-
-        except Exception as e:
-            print("❌ playback:", e)
-
-    # ===================================================== #
-    #   자동 퇴장 기능
-    # ===================================================== #
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        vc = member.guild.voice_client
-        if not vc:
-            return
-
-        # 봇이 속한 음성 채널이 없으면 패스
-        if not vc.channel:
-            return
-
-        # 봇이 있는 채널에 남은 유저 수 확인
-        humans = [m for m in vc.channel.members if not m.bot]
-
-        if len(humans) == 0:
-            print("👋 아무도 없음 → 자동 퇴장")
-            await vc.disconnect()
+        await self.enqueue(message)
 
 
 async def setup(bot):
-    await bot.add_cog(TTSCog(bot))
-    print("🔊 TTSCog Loaded")
+    await bot.add_cog(TTS(bot))

@@ -1,40 +1,44 @@
-import subprocess
-import uuid
 import os
+import uuid
 from google.cloud import texttospeech
+from utils.tts_engine import preprocess
 
 client = texttospeech.TextToSpeechClient()
 
-audio_config = texttospeech.AudioConfig(
-    audio_encoding=texttospeech.AudioEncoding.LINEAR16
-)
+LANG = "ko-KR"
 
-voice = texttospeech.VoiceSelectionParams(
-    language_code="ko-KR",
-    name="ko-KR-Neural2-A"
-)
+VOICE_MAP = {
+    "female_a": "ko-KR-Standard-A",
+    "female_b": "ko-KR-Standard-B",
+    "male_a": "ko-KR-Standard-C",
+    "male_b": "ko-KR-Standard-D",
+}
 
-def google_tts(text: str) -> str:
+def google_tts(text: str, style="female_a"):
+    text = preprocess(text)
+    voice_name = VOICE_MAP.get(style, VOICE_MAP["female_a"])
+
     synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    voice_params = texttospeech.VoiceSelectionParams(
+        language_code=LANG,
+        name=voice_name,
+    )
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
     response = client.synthesize_speech(
         input=synthesis_input,
-        voice=voice,
+        voice=voice_params,
         audio_config=audio_config
     )
 
-    tmp_id = uuid.uuid4().hex
-    wav_path = f"/tmp/{tmp_id}.wav"
-    ogg_path = f"/tmp/{tmp_id}.ogg"
+    filename = f"{uuid.uuid4()}.mp3"
+    filepath = os.path.join("voice", filename)
+    os.makedirs("voice", exist_ok=True)
 
-    with open(wav_path, "wb") as f:
+    with open(filepath, "wb") as f:
         f.write(response.audio_content)
-
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", wav_path,
-        "-acodec", "libopus",
-        ogg_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    os.remove(wav_path)
-    return ogg_path
+    return filepath

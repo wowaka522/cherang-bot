@@ -1,4 +1,3 @@
-# cogs/ai_chat.py
 import os
 import json
 import random
@@ -15,6 +14,7 @@ from dotenv import load_dotenv
 print("📍 ai_chat.py imported")
 
 from utils.love_db import change_user_love, get_user_love
+from utils.gif_manager import get_random_cat_gif  # 감정별 GIF 사용
 
 load_dotenv()
 
@@ -41,7 +41,7 @@ TALK_COOLDOWN = 60 * 60 * 6   # 6시간 쿨타임
 TALK_STATE: dict[int, dict] = {}
 
 # ==========================
-# 음악 추천용 간단 풀
+# 음악 추천용 기본 풀 (예비용)
 # ==========================
 
 MUSIC_RECOMMEND_RATE = 1 / 30  # 대충 30마디에 한 번 정도
@@ -53,36 +53,126 @@ SONG_POOL = [
         "url": "https://youtu.be/y7jrpS8GHxs",
     },
     {
-        "title": "추천곡 1",
-        "artist": "",
+        "title": "소행성",
+        "artist": "원위",
         "url": "https://music.youtube.com/watch?v=CI2jytCXNqE&si=-LoKhP1BGwPYPXiR",
     },
     {
-        "title": "추천곡 2",
-        "artist": "",
+        "title": "Beautiful Beautiful",
+        "artist": "온앤오프",
         "url": "https://music.youtube.com/watch?v=Sj0q515EOM8&si=x7bhjx_YfEgdbu9_",
     },
     {
-        "title": "추천곡 3",
-        "artist": "",
+        "title": "You’re My Favorite Accident",
+        "artist": "Auric Veil",
         "url": "https://music.youtube.com/watch?v=LGJq1ITmfSs&si=vVTu0VohxvW1zQGe",
     },
     {
-        "title": "추천곡 4",
-        "artist": "",
+        "title": "별 헤는 밤",
+        "artist": "원위",
         "url": "https://music.youtube.com/watch?v=uQDzdXse59Y&si=jaCZkdPutSaZ4dd2",
     },
     {
-        "title": "추천곡 5",
-        "artist": "",
+        "title": "천재는 시발 새끼들한테 미움받아 단명한다",
+        "artist": "루루",
         "url": "https://music.youtube.com/watch?v=QytVOi6H_ys&si=nA2RYMi-5jw6IGCn",
     },
     {
-        "title": "추천곡 6",
+        "title": "Boogie Man",
         "artist": "",
         "url": "https://music.youtube.com/watch?v=HLMekAvGvOE&si=Wi17BbBTDmSymmvy",
     },
 ]
+
+# ==========================
+# 감정 / 호감도 / GIF 설정
+# ==========================
+
+# 감정별 추가 호감도 보정
+EMOTION_LOVE_MAP = {
+    "happy": 3,
+    "neutral": 0,
+    "sad": 1,
+    "angry": -2,
+    "shy": 4,
+}
+
+# 감정 → GIF 그룹 맵핑
+EMOTION_GIF_MAPPING = {
+    "happy": "happy",
+    "neutral": "neutral",
+    "sad": "sad",
+    "angry": "angry",
+    "shy": "shy",
+}
+
+# GIF 등장 확률 (희귀하게)
+GIF_RATE = 0.10
+
+# ==========================
+# 음악 추천용 플레이리스트 매핑 (형이 준 플리)
+# ==========================
+
+MOOD_PLAYLISTS = {
+    "happy": [
+        "https://music.youtube.com/playlist?list=PLB4twT93befFoloHgGcbZUDw1bZPOjHpi&si=PXVMmGos6J1nFHnt"
+    ],
+    "sad": [
+        "https://music.youtube.com/playlist?list=PL5D4KtcLelgOOASBwbNV0u9HcE7LhF4cl&si=yd3bAtiYYr9tDUrQ"
+    ],
+    "angry": [
+        "https://music.youtube.com/playlist?list=PL6-a8FxHlTpjdo7s9DM9wzsyWfvCIg-9D&si=mcoA5ma3gB5diO1O"
+    ],
+    "neutral": [
+        "https://music.youtube.com/playlist?list=PLjjw2MheUpTH5wWh8R3WKzj1AFOQUXDLm&si=cokIsN7J0N2lr7VB"
+    ],
+    "shy": [
+        "https://music.youtube.com/playlist?list=PLXdIpLyWywNK1vqpbrioT8RczlAFfeSWs&si=TwvSQ3Vc8QPF9PbL"
+    ],
+}
+
+MOOD_LABELS = {
+    "happy": "행복",
+    "sad": "슬픔",
+    "angry": "분노",
+    "neutral": "기본",
+    "shy": "사랑",
+}
+
+# 유저별 음악 취향 저장
+MUSIC_PREF_PATH = Path("data") / "music_pref.json"
+MUSIC_PREF_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def load_music_pref():
+    if not MUSIC_PREF_PATH.exists():
+        return {}
+    try:
+        with MUSIC_PREF_PATH.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print("⚠️ music_pref.json 로드 실패, 초기화:", e)
+        return {}
+
+
+def save_music_pref(data: dict):
+    with MUSIC_PREF_PATH.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def update_music_pref(user_id: str, emotion: str):
+    if emotion not in EMOTION_LOVE_MAP:
+        return
+    data = load_music_pref()
+    user = data.get(user_id, {})
+    user[emotion] = user.get(emotion, 0) + 1
+    data[user_id] = user
+    save_music_pref(data)
+
+
+def get_music_pref(user_id: str) -> dict:
+    data = load_music_pref()
+    return data.get(user_id, {})
 
 
 # ==========================
@@ -231,7 +321,54 @@ def is_talk_active(user_id: int) -> bool:
 
 
 # ==========================
-# DeepSeek 호출
+# DeepSeek 감정 분석
+# ==========================
+
+def analyze_emotion_deepseek(content: str) -> str:
+    """
+    DeepSeek를 이용해 감정을 분석.
+    반환값: happy / neutral / sad / angry / shy 중 하나
+    실패 시 neutral
+    """
+    if not DEEPSEEK_API_KEY:
+        return "neutral"
+
+    system_prompt = (
+        "사용자의 문장을 보고 감정을 분석해.\n"
+        "다음 중에서 하나만 정확히 소문자로 출력해:\n"
+        "happy, neutral, sad, angry, shy\n"
+        "다른 말은 하지 마."
+    )
+
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content},
+        ],
+        "max_tokens": 5,
+    }
+
+    try:
+        r = requests.post(
+            "https://api.deepseek.com/chat/completions",
+            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+            json=payload,
+            timeout=8,
+        )
+        data = r.json()
+        emo = data["choices"][0]["message"]["content"].strip().lower()
+        if emo not in EMOTION_LOVE_MAP:
+            emo = "neutral"
+        print(f"🎯 Emotion detect: {emo}")
+        return emo
+    except Exception as e:
+        print("⚠️ DeepSeek 감정 분석 실패:", e)
+        return "neutral"
+
+
+# ==========================
+# DeepSeek 호출 (기존)
 # ==========================
 
 def call_deepseek_reply(user_name: str, content: str, love: int, tone: str) -> str:
@@ -253,6 +390,7 @@ def call_deepseek_reply(user_name: str, content: str, love: int, tone: str) -> s
         {"role": "user", "content": content},
     ]
 
+    # 톤은 기존 로직 + 감정 보정이 약하게 들어감 (A 옵션: 과하지 않게)
     if tone == "angry":
         messages.append({"role": "system", "content": "지금 너 기분 안 좋음. 말투에 짜증을 조금 섞어."})
     elif tone == "happy":
@@ -323,20 +461,53 @@ async def call_deepseek_proactive(love: int) -> str:
         return random.choice(fallback)
 
 
-async def maybe_send_music(channel: discord.TextChannel):
-    """작게 확률로 음악 추천 임베드"""
+async def maybe_send_emotion_gif(channel: discord.TextChannel, emotion: str):
+    """감정에 맞는 체랑 GIF를 희귀하게(10%) 보내기"""
+    if random.random() > GIF_RATE:
+        return
+
+    group = EMOTION_GIF_MAPPING.get(emotion, "neutral")
+    path = get_random_cat_gif(group)
+    if not path:
+        return
+
+    try:
+        await channel.send(file=discord.File(path))
+    except Exception as e:
+        print("⚠️ GIF 전송 실패:", e)
+
+
+async def maybe_send_music(channel: discord.TextChannel, emotion: str, user_id: str):
+    """유저별 취향 + 현재 감정 기반으로 플레이리스트 추천"""
     if random.random() > MUSIC_RECOMMEND_RATE:
         return
 
-    song = random.choice(SONG_POOL)
-    title = song.get("title") or "추천 곡"
-    artist = song.get("artist") or ""
-    url = song["url"]
+    # 유저 취향 갱신
+    update_music_pref(user_id, emotion)
+    prefs = get_music_pref(user_id)
+
+    # 기본 점수
+    scores = {m: 0.0 for m in EMOTION_LOVE_MAP.keys()}
+
+    # 과거 취향 반영 (가볍게 0.5 배)
+    for emo, cnt in prefs.items():
+        if emo in scores:
+            scores[emo] += cnt * 0.5
+
+    # 현재 감정 강하게 반영
+    if emotion in scores:
+        scores[emotion] += 2.0
+
+    # 최고 점수 감정 선택
+    best_mood = max(scores, key=scores.get) if scores else "neutral"
+    if best_mood not in MOOD_PLAYLISTS:
+        best_mood = "neutral"
+
+    playlist_url = random.choice(MOOD_PLAYLISTS[best_mood])
+    mood_label = MOOD_LABELS.get(best_mood, "추천")
 
     line = music_line_by_time()
-    desc = f"[{title}]({url})"
-    if artist:
-        desc += f"\n{artist}"
+    desc = f"[{mood_label} 플레이리스트 보러가기]({playlist_url})"
 
     embed = discord.Embed(
         title="🎧 체랑 추천곡",
@@ -357,7 +528,7 @@ class AIChatCog(commands.Cog):
         self.bot = bot
 
     async def _maybe_start_chat(self, channel: discord.TextChannel, user: discord.Member, love: int):
-        # 기존 '먼저 말걸기' 로직 (원하면 나중에 조정)
+        # 기존 '먼저 말걸기' 로직
         if love < 10:
             return
         if user.id in IS_WAITING:
@@ -397,6 +568,7 @@ class AIChatCog(commands.Cog):
         print("🔥 AIChatCog fired")
 
         uid = msg.author.id
+        uid_str = str(uid)
         content = msg.content.strip()
         lowered = content.lower()
 
@@ -411,7 +583,7 @@ class AIChatCog(commands.Cog):
                 state["active"] = False
                 return
 
-            # 욕/칭찬에 따라 호감도 변화 + tone 결정
+            # 욕/칭찬에 따라 호감도 변화 + tone 결정 (기존 로직)
             tone = "normal"
             delta = 0
             if any(b in lowered for b in BAD_WORDS):
@@ -422,11 +594,22 @@ class AIChatCog(commands.Cog):
                 if tone != "angry":
                     tone = "happy"
 
-            # 약간의 랜덤 호감도 보너스
+            # 🔹 감정 분석 추가
+            emotion = analyze_emotion_deepseek(content)
+            emo_delta = EMOTION_LOVE_MAP.get(emotion, 0)
+            delta += emo_delta
+
+            # 🔹 톤은 A옵션 기준: 기존 tone 우선, normal일 때만 살짝 보정
+            if tone == "normal":
+                if emotion == "angry":
+                    tone = "angry"
+                elif emotion in ("happy", "shy"):
+                    tone = "happy"
+
+            # 약간의 랜덤 호감도 보너스 (기존 유지)
             extra = random.randint(0, 3)
             delta += extra
 
-            uid_str = str(uid)
             if delta != 0:
                 change_user_love(uid_str, delta)
             love = get_user_love(uid_str)
@@ -438,13 +621,19 @@ class AIChatCog(commands.Cog):
                 reply = call_deepseek_reply(msg.author.display_name, content, love, tone)
 
             # 멘션 없이 자연스럽게
-            await msg.channel.send(reply)
+            try:
+                await msg.channel.send(reply)
+            except Exception as e:
+                print("❌ Failed to send reply (talk mode):", type(e).__name__, str(e))
+                await msg.channel.send("…잠깐 멍해졌어.")
+
+            # 희귀 GIF
+            await maybe_send_emotion_gif(msg.channel, emotion)
+            # 가끔 음악 추천 (유저별 취향 기반)
+            await maybe_send_music(msg.channel, emotion, uid_str)
 
             # 카운트 증가
             state["count"] = state.get("count", 0) + 1
-
-            # 가끔 음악 추천
-            await maybe_send_music(msg.channel)
 
             # 10회 도달 시 종료
             if state["count"] >= TALK_MAX_COUNT:
@@ -467,8 +656,6 @@ class AIChatCog(commands.Cog):
         if not any(w in lowered for w in TRIGGERS):
             return
 
-        uid_str = str(uid)
-
         delta = 0
         tone = "normal"
         if any(b in lowered for b in BAD_WORDS):
@@ -477,6 +664,18 @@ class AIChatCog(commands.Cog):
         if any(g in lowered for g in GOOD_WORDS):
             delta += 1
             tone = "happy" if tone != "angry" else "angry"
+
+        # 🔹 감정 분석 추가
+        emotion = analyze_emotion_deepseek(content)
+        emo_delta = EMOTION_LOVE_MAP.get(emotion, 0)
+        delta += emo_delta
+
+        # 🔹 톤 보정 (기존 존중, 없을 때만 살짝)
+        if tone == "normal":
+            if emotion == "angry":
+                tone = "angry"
+            elif emotion in ("happy", "shy"):
+                tone = "happy"
 
         if delta != 0:
             change_user_love(uid_str, delta)
@@ -497,6 +696,12 @@ class AIChatCog(commands.Cog):
             print("✅ reply sent (trigger mode)")
         except Exception as e:
             print("❌ Failed to send reply:", type(e).__name__, str(e))
+            await msg.channel.send("…지금 뭐라고 했냐.")
+
+        # 희귀 GIF
+        await maybe_send_emotion_gif(msg.channel, emotion)
+        # 가끔 음악 추천 (유저별 취향 기반)
+        await maybe_send_music(msg.channel, emotion, uid_str)
 
         LAST_CHAT_TIME[uid] = (msg.channel.id, datetime.utcnow().timestamp())
         # 필요하면 여기서도 maybe_start_chat 호출 가능

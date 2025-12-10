@@ -1,40 +1,36 @@
-# utils/love_embed.py
-
 import discord
 from utils.love_db import get_user_love
 
 LOVE_LEVELS = [
-    (-100, -20, "…거기 멈춰. 진짜 짜증나거든."),
-    (-19, -1, "흥. 나한테 말 걸 생각은 하지도 마."),
-    (0, 19, "뭐… 나쁘진 않다."),
-    (20, 49, "조금… 친해진 것 같기도 하고."),
-    (50, 79, "너랑 얘기하는 거, 싫지 않아."),
-    (80, 100, "…넌 특별하니까.")
+    (0, 19, "…그냥 지나가는 모험가"),
+    (20, 39, "조금 알 것 같기도?"),
+    (40, 59, "흠, 너 괜찮네."),
+    (60, 79, "너랑 있는 거… 싫지 않네."),
+    (80, 99, "…난 네가 좋아."),
+    (100, 9999, "특별해. 아주 많이.")
 ]
 
 def get_level_text(score: int) -> str:
     for low, high, text in LOVE_LEVELS:
         if low <= score <= high:
             return text
-    return "…뭐야, 이거 계산 오류 아냐?"
+    return "…뭔가 오류났어."
 
 def make_love_embed(user: discord.abc.User) -> discord.Embed:
     score = get_user_love(str(user.id))
-    level = get_level_text(score)
 
     total_blocks = 20
-    filled = int((score + 100) / 200 * total_blocks)
-    filled = max(0, min(total_blocks, filled))
+    filled = min(total_blocks, int(score / 100 * total_blocks))
     bar = "🟦" * filled + "⬛" * (total_blocks - filled)
 
     emb = discord.Embed(
-        title=f"{user.display_name}와 체랑의 관계",
-        description=f"**{level}**",
+        title=f"{user.display_name} ❤️ 체랑봇",
+        description=f"**{get_level_text(score)}**",
         color=0xFF91B0
     )
     emb.add_field(name="호감도", value=f"**{score} / 100**", inline=False)
     emb.add_field(name="관계 게이지", value=bar, inline=False)
-    emb.set_footer(text="대화 많이 하면… 더 알고 싶어질지도 모르니까.")
+    emb.set_footer(text="…딱히 좋아하는 건 아니네.")
     if user.avatar:
         emb.set_thumbnail(url=user.avatar.url)
     return emb
