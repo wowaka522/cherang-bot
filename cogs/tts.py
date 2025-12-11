@@ -68,6 +68,7 @@ class TTS(commands.Cog):
 
         bot.loop.create_task(player_loop(bot))
 
+    @app_commands.guild_only()
     @app_commands.command(name="목소리", description="TTS 목소리를 변경합니다")
     async def voice(self, interaction):
         await interaction.response.send_message(
