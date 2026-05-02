@@ -1,0 +1,113 @@
+{
+  "weather.cmd.desc": "FFXIV 지역의 현재 날씨 정보를 표시합니다.",
+  "weather.cmd.param.zone": "확인할 지역명을 입력해 주세요. (예: 림사 / 라노시아)",
+
+  "weather.msg.ask_where": "어느 지역의 날씨를 확인하시겠어요?",
+  "weather.msg.not_found": "❌ '{text}' 지역을 찾지 못했습니다.",
+
+  "weather.err.zone_not_found": "❌ '{zone_ko}' 지역을 찾지 못했습니다.",
+
+  "weather.ui.choose_zone_title": "🔎 아래 목록에서 선택해 주세요",
+  "weather.ui.select.placeholder": "지역을 선택해 주세요",
+
+  "weather.ui.err.load_now": "❌ 현재 날씨 정보를 불러오지 못했습니다.",
+  "weather.ui.err.load_forecast": "❌ 날씨 예보를 불러오지 못했습니다.",
+
+  "weather.embed.title": "🌤️ {zone_ko} 날씨",
+  "weather.embed.desc": "⏳ 다음 날씨까지 **{left_text}** 남았습니다.\n🔹 **ET** {et_hour:02d}:00\n",
+
+  "weather.embed.field.now": "현재",
+  "weather.embed.field.next": "다음",
+  "weather.embed.field.next2": "다다음",
+
+  "weather.embed.footer.hint": "특정 날씨가 언제 오는지 확인하시려면,\n[📅 특정 날씨 추적] 버튼 또는 \"[지역] [날씨] 언제\" 자연어를 사용해 주세요.",
+
+  "weather.nl.triggers": ["날씨", "기상", "어때"],
+
+  "weather.find.fail_parse": "❌ 입력을 이해하지 못했습니다.\n예: 림사 안개 언제?",
+  "weather.find.msg.usage": "예: 림사 안개 언제?",
+  "weather.find.msg.not_found_24h": "24시간 이내에는 {zone_ko}에 {weather_ko} 날씨가 없습니다.",
+
+  "weather.find.embed.title": "날씨 찾기: {zone_ko}",
+  "weather.find.embed.desc": "**{weather_ko}**\n<t:{unix}:R> (<t:{unix}:F>)\nET {et_hour:02d}:00",
+
+  "weather.find.msg.invalid_weather": "❌ {zone_ko}에서는 '{weather_ko}' 날씨가 발생하지 않습니다.\n👉 해당 날씨는 아래 지역에서 확인해 보세요: {suggest}",
+  "weather.find.suggest.none": "추천할 수 있는 지역을 찾지 못했습니다.",
+
+  "weather.track.ui.select.placeholder": "추적할 날씨를 선택해 주세요",
+  "weather.track.ui.err.fail_default": "❌ 해당 날씨 정보를 찾지 못했습니다.",
+
+  "weather.tug.fallback_name": "터주#{fish_id}",
+
+  "weather.tug.embed.title": "🎣 {zone_ko} · 터주 정보",
+  "weather.tug.embed.desc": "이 지역의 터주 목록입니다. (최대 {max_show}개 표시)",
+  "weather.tug.embed.field.list": "터주 목록",
+  "weather.tug.embed.field.result": "확인 결과",
+  "weather.tug.msg.none": "❌ 이 지역에는 등록된 터주 정보가 없습니다.",
+  "weather.tug.embed.footer.back": "⬅️ [뒤로가기] 버튼으로 메인 화면으로 돌아갈 수 있습니다.",
+  "weather.tug.embed.footer.page": "{page}/{pages} 페이지 · 상세 정보는 목록에서 선택해 주세요.",
+
+  "weather.tug.ui.select.placeholder": "상세 정보를 확인할 터주를 선택해 주세요",
+  "weather.tug.ui.err.bad_pick": "❌ 올바르지 않은 선택입니다.",
+  "weather.tug.ui.err.no_db": "❌ 터주 데이터베이스 연결에 실패했습니다.",
+  "weather.tug.ui.err.bad_data": "❌ 데이터를 불러오는 중 오류가 발생했습니다.",
+
+  "weather.tug.line.available": "🟢 **{name}** · 지금 가능합니다",
+  "weather.tug.line.next": "🔴 **{name}** · <t:{next_ts}:R> (<t:{next_ts}:t>)",
+  "weather.tug.line.unknown": "🔴 **{name}** · 다음 기회를 계산할 수 없습니다.",
+
+  "weather.tug.detail.embed.title": "🎣 {fish_name} 상세 정보",
+  "weather.tug.detail.embed.desc": "**{status}**",
+
+  "weather.tug.detail.status.ok": "🟢 현재 낚시가 가능한 상태입니다.",
+  "weather.tug.detail.status.no": "🔴 현재는 낚시할 수 없습니다.",
+
+  "weather.tug.detail.field.location": "📍 낚시터 위치",
+  "weather.tug.detail.field.time": "⏰ 제한 시간 (ET)",
+  "weather.tug.detail.field.condition": "☁️ 요구 날씨 조건",
+  "weather.tug.detail.field.next_window": "🕒 다음 입질 시간",
+  "weather.tug.detail.value.next_window": "<t:{ts}:F> (<t:{ts}:R>)",
+
+  "weather.tug.detail.field.intuition": "✨ 어부의 직감 조건",
+  "weather.tug.detail.field.method": "💡 낚시 공략 방법",
+  "weather.tug.detail.value.method": "🎣 `{method}` 활용",
+
+  "weather.tug.detail.footer.index": "{index} / {total}",
+
+  "weather.ui.footer.back": "⬅️ [뒤로가기] 버튼으로 메인 화면으로 돌아갈 수 있습니다.",
+
+  "weather.ui.btn.forecast": "🔍 일기 예보",
+  "weather.ui.btn.tug": "🎣 터주",
+  "weather.ui.btn.track": "📅 특정 날씨 추적",
+  "weather.ui.btn.back": "⬅️ 뒤로가기",
+  "weather.ui.btn.prev": "◀️ 이전",
+  "weather.ui.btn.next": "다음 ▶️",
+  "weather.ui.btn.list": "📃 목록",
+  "weather.ui.btn.home": "⬅️ 홈",
+
+  "fish.alert.fallback_name": "터주#{fish_id}",
+  "fish.alert.msg": "🔔 <@{user_id}>\n🎣 **{name}**\n📍 {loc}\n지금 바로 낚시가 가능한 시간입니다. 서둘러 확인해 주세요.",
+
+  "weather.forecast.embed.title": "🔍 {zone_ko} · 일기 예보",
+  "weather.forecast.embed.desc": "향후 날씨 변화를 시간 순서대로 표시합니다.",
+  "weather.forecast.embed.field.list": "예보 목록",
+  "weather.forecast.line": "<t:{start_unix}:t> (ET{et_hour:02d}) · {weather_ko} · <t:{start_unix}:R>",
+  "weather.forecast.embed.empty": "표시할 예보 정보가 없습니다.",
+
+  "weather.track.embed.title": "📅 {zone_ko} · 특정 날씨 추적",
+  "weather.track.embed.desc": "추적할 날씨를 선택해 주세요.",
+
+  "weather.ui.footer.back_hint": "⬅️ [뒤로가기] 버튼으로 메인 화면으로 돌아갈 수 있습니다.",
+
+  "weather.ui.btn.alert": "🔔 알림 받기",
+
+  "fish.alert.ok": "✅ 알림이 정상적으로 등록되었습니다.\n다음 입질 시간: <t:{ts}:F> (<t:{ts}:R>)",
+  "fish.alert.err.no_repo": "❌ 알림 저장소가 준비되지 않았습니다.",
+  "fish.alert.err.no_spot": "❌ 이 터주는 위치 정보가 없어 알림을 등록할 수 없습니다.",
+  "fish.alert.err.no_future_window": "❌ 현재는 다음 윈도우를 계산할 수 없어 알림을 등록할 수 없습니다.",
+
+  "weather.find.impossible": "{zone_ko} 지역에서는 '{target_ko}' 날씨가 발생하지 않습니다.",
+  "weather.find.available_in_zone": "해당 지역에서 발생하는 날씨: {weathers}",
+  "weather.find.suggest": "해당 날씨를 확인할 수 있는 다른 지역: {zones}",
+  "weather.find.tip.retry": "지역명을 변경하시거나, 위 목록에 있는 날씨로 다시 검색해 주시기 바랍니다."
+ }

@@ -1,0 +1,24 @@
+name: Deploy Bot
+
+on:
+push:
+branches: ["main"]
+
+jobs:
+deploy:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Deploy to VM
+    uses: appleboy/ssh-action@v1.0.0
+    with:
+      host: ${{ secrets.HOST }}
+      username: wltn5548
+      key: ${{ secrets.SSH_PRIVATE_KEY }}
+      script: |
+        cd /home/wltn5548/cherang-bot
+        git pull origin main
+        pip install -r requirements.txt
+        pm2 restart cherang-bot
+```

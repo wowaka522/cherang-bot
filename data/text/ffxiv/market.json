@@ -1,0 +1,47 @@
+{
+    "market.title_kr": "🇰🇷 한국 서버 시세 정보",
+    "market.field_desc": "📄 아이템 설명",
+    "market.field_category": "📂카테고리",
+    "market.field_lowest": "현재 최저가",
+    "market.no_desc": "설명 없음",
+    "market.unknown": "정보 없음",
+    "market.no_listings": "현재 등록된 매물이 없습니다.",
+    "market.graph_title_suffix": "가격 변동 그래프",
+    "market.graph_desc": "최근 7일간 '한국 서버 전체 최저가' 변동 내역입니다.",
+
+    "time.unknown": "확인 불가",
+    "time.just_now": "방금 전",
+    "time.minutes_ago": "{m}분 전",
+    "time.hours_ago": "{h}시간 전",
+    "time.days_ago": "{d}일 전",
+    "time.date_fmt": "%Y-%m-%d",
+
+    "market.graph_fail": "데이터가 부족하여 그래프를 생성할 수 없습니다.",
+    "market.similar.placeholder": "검색된 유사 아이템 목록",
+
+    "market.alert.modal.title": "아이템 가격 알림 설정",
+    "market.alert.input.target.label": "목표 가격 (설정 금액 이하 시 알림)",
+    "market.alert.input.target.placeholder": "숫자만 입력해 주세요. (예: 500000)",
+    "market.alert.err.invalid_number": "올바른 숫자 형식으로 입력해 주세요.",
+    "market.alert.ok.temp": "✅ 알림 등록이 완료되었습니다. **{item}** 품목이 **{price}** 길 이하로 내려가면 안내해 드리겠습니다.",
+
+    "market.err.item_not_found": "'{q}' 아이템을 찾지 못했습니다.",
+    "market.err.search_fail": "'{q}'와 일치하거나 유사한 아이템이 없습니다.",
+    "market.err.service_missing": "시세 조회 서비스(market_svc)를 불러올 수 없습니다. 시스템 설정을 확인해 주세요.",
+
+    "kr.world.moogle": "모그리",
+    "kr.world.chocobo": "초코보",
+    "kr.world.carbuncle": "카벙클",
+    "kr.world.tonberry": "톤베리",
+    "kr.world.fenrir": "펜리르",
+
+    "market.field_servers": "서버별 시세",
+    "market.updated_label": "업데이트",
+    "market.updated_line": "╰ {time_icon} {age} ({label})",
+
+    "market.loading.search": "아이템을 다시 찾는 중…",
+    "market.loading.graph": "그래프를 생성하는 중…",
+    "market.lowest.title": "현재 최저가",
+    "market.lowest.sep": "━━━━━━━━━━",
+    "market.lowest.gil": "길"
+}

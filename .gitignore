@@ -1,0 +1,40 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# === OS/Editor ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# === Secrets / local config ===
+.env
+*.env
+config*.json
+token*.txt
+
+# === Logs / temp ===
+logs/
+*.log
+
+# === Build artifacts ===
+dist/
+build/
+*.egg-info/
+
+# === FFXIV fish RAW (big files) ===
+data/ffxiv/fish/raw/data.js
+data/ffxiv/fish/raw/csv/
+
+# (선택) 빌드 결과물까지 제외하고 싶으면 아래 주석 해제
+# data/ffxiv/fish/compiled/final_fishing_db.json
+
+# --- Local tools (do not commit) ---
+tools/sc/
+tools/**/SaintCoinach*.exe
+tools/**/SaintCoinach*.dll
+tools/**/SaintCoinach*.pdb
+tools/**/SaintCoinach*.config
